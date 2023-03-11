@@ -29,6 +29,37 @@ NeRF라는 모델이 나오기 전에 View Synthesis를 다루는 모델은 크�
  &nbsp; 둘째, RGB image들을 활용해 높은 quality의 view synthesis를 목표로 하는 'sampled volumetric representations'이다. sampled volumetric representations은 다양한 형태와 재질을 표현할 뿐만 아니라, gradient 기반의 optimization에도 잘 맞는다. 최근의 sampled volumetric representation은 각 image로부터 voxel grids를 sample하고, 낮은 해상의 voxel grids의 불연속성으로 발생하는 noise들을 처리할 수 있는  CNN 구조를 지닌다. sampled volumetric representation은 위와 같은 이산적인 sampling으로 인해 고해상도의 이미지에서는 더 정교한 sampling이 요구되어, 처리 시간이 길어지는 단점도 있다. NeRF는 연속적인 volume을 fully-connected neural network에 인코딩하여 더 높은 해상의 렌더링을 더 낮은 비용으로 생성해낼 수 있다.
  </br>
  </br>
- ### 논문의 모델 설계
+ ### NeRF
  ---
+#### NeRF Architecture 
+---
  ![Fig 2 : An Overview of NeRF Architecture](./img/NeRF-2.png)
+ </br>
+ </br>
+ &nbsp; NeRF는 View Synthesis와 관련된 선행 연구들의 한계점을 극복하기 위한 세 가지 핵심 모듈이 있다.
+ </br>
+ &nbsp; 첫째, 5D Neural Radiance Fields & MLP network이다. 3D 위치 벡터와 2D viewing direction 벡터를 모델의 입력으로 사용하고, 모델의 입력을 MLP에서 처리해 연속적인 장면들의 복잡한 기하학적 특징(e.g., density)을 추출한다.
+ </br>
+ &nbsp; 둘째, Classical Volume Rendering & Stratified Sampling이다. 기존의 Volume Rendering 방식을 사용해, 추출된 volume의 density를 camera ray의 color로 렌더링한다. 그리고 렌더링된 camera ray의 color vector, C(**r**)과 비교할 NeRF에서 예측할 color vector, C^hat(**r**)을 만들기 위해 stratified sampling을 사용한다.
+</br>
+&nbsp; 셋째, Positional Encoding & Hierarchical Volume Sampling이다. Positional Encoding은 MLP가 5D Radiance Field라는 입력의 high-frequency representation을 학습할 수 있도록 돕는다. 그리고 Hierarchical Volume Sampling은 coarse network와 fine network라는 hierarchical representation을 활용해 최종 렌더링에 도움이 될 법한 sample들을 추출해 렌더링을 효율적으로 만든다. 
+</br>
+&nbsp; 정리해보면, NeRF는 3D location vector와 2D viewing direction vector라는 입력을 받아 View Synthesis에 필요한  color vector와 density를 출력하는 모델이다. 그리고 NeRF는 모델 내부에서 positional encoding, MLP, rendering, sampling 등 다양한 techniques을 활용해 high quality를 갖는 novel view synthesis를 목표로 한다.
+</br>
+</br>
+#### Core Components of NeRF
+---
+&nbsp; 위에서 설명했던 NeRF의 구성 요소들을 구체적으로 살펴보고자 한다.
+</br>
+&nbsp; 처음으로 설명했던 5D Neural Radiance Fields와 MLP network를 알아본다.
+</br>
+&nbsp; 먼저, 5D Neural Radiance Fields에 속하는 3D location vector와 2D viewing direction vector는 다음과 같이 표현한다. $$\vec{x} = (x, y, z) ,  \vec{d}= (\theta, \phi)$$
+&nbsp; 다음으로, 5D Neural Radiance Fields를 입력으로 받아 color와 density를 출력하는 MLP는 아래와 같이 표현할 수 있다. $$F_\Theta : (\vec{x}, \vec{d}) \to (\vec{c}, \sigma)$$
+&nbsp; 그리고 MLP의 구체적인 구조는 다음과 같다.
+</br>
+</br> 
+![Fig 3 : MLP architecture](/img/NeRF-9.png)
+</br>
+</br>
+&nbsp; 두 번째로 설명했던
+
