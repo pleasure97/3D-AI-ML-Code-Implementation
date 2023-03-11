@@ -68,10 +68,15 @@ NeRF라는 모델이 나오기 전에 View Synthesis를 다루는 모델은 크�
 </br>
 </br>
 &nbsp; 하나씩 이해하면서 수식을 더 깊이 이해해보자. 
+</br>
 &nbsp; $t_n :$ camera ray의 가장 가까운 경계 지점 
+</br>
 &nbsp; $t_f:$ camer ray의 가장 먼 경계 지점 
+</br>
 &nbsp; $T(t):$ 축적된 투과율 (= camera ray가 $t_n$에서 $t$까지 지나면서 어떤 입자와도 충돌하지 않을 확률) 
+</br>
 &nbsp; $\sigma(\vec{x}):$ volume density (= 위치 $\vec{x}$에 존재하는 입자로 인해 camera ray가 중단될 확률)
+</br>
 &nbsp; $\vec{r}(t) = \vec{o} + t\vec{d} :$ $\vec{o}$는 ray의 원점, $\vec{d}$는 ray의 방향 벡터
 </br>
 &nbsp; 종합해보면, $t_n$에서 $t_f$ 사이의 camera ray $\vec{r}$의 color는 camera ray $\vec{r}$의 방향, $\vec{r}$이 입자와 충돌할 확률, $\vec{r}$이 입자와 충돌했을 때 중단될 확률을 고려한 것이다. 
@@ -88,3 +93,6 @@ NeRF라는 모델이 나오기 전에 View Synthesis를 다루는 모델은 크�
 ![](./img/NeRF-5.png)
 </br>
 </br>
+&nbsp; $\delta_i = t_{i+1 }- t_i :$  인접한 sample들 간의 거리. $\delta_i$가 작을 수록, 즉, 인접한 sample들의 거리가 가까울 수록 비슷한 density를 예측하므로, $\delta_i$로 조절한다.
+</br>
+&nbsp; $\alpha_i = 1 - exp(-\sigma_i\delta_i) :$ alpha compositing. 
