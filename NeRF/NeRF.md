@@ -47,26 +47,19 @@ NeRF라는 모델이 나오기 전에 View Synthesis를 다루는 모델은 크�
 </br>
 ### Core Components of NeRF
 ---
-</br>
+&nbsp;
 &nbsp; 위에서 설명했던 NeRF의 구성 요소들을 구체적으로 살펴보고자 한다.
 </br>
 &nbsp; 처음으로 설명했던 5D Neural Radiance Fields와 MLP network를 알아본다.
 </br>
 &nbsp; 먼저, 5D Neural Radiance Fields에 속하는 3D location vector와 2D viewing direction vector는 다음과 같이 표현한다.
 </br>
-![](./img/NeRF-10.png)
+$$\vec{x} = (x, y, z)$$
+$$\vec{d} = (\theta, \phi)$$
 &nbsp; 다음으로, 5D Neural Radiance Fields를 입력으로 받아 color와 density를 출력하는 MLP는 아래와 같이 표현할 수 있다. 
-![](./img/NeRF-11.png)
-
-</br>
-&nbsp; 그리고 MLP의 구체적인 구조는 다음과 같다.
-</br>
-</br> 
 ![](./img/NeRF-9.png)
-</br>
-</br>
 
-&nbsp; 두 번째로 설명했던 Classical Volume Rendering과 Stratified Sampling을 살펴본다.
+&nbsp; 두 번째로 설명했던 Classical Volume Rendering과 Stratified Sampling을 살펴본다. 
 </br>
 &nbsp; Classical Volume Rendering과 관련된 수식은 다음과 같다. 
 </br>
