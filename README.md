@@ -19,22 +19,28 @@
  
  ■ NeRF : Representing Scenes as Neural Radiance for View Synthesis (ECCV 2020)
  </br>
-  &emsp;  □ [Paper Summary](/NeRF/NeRF.md)
+  &emsp;  □ [Paper Study](/NeRF/NeRF.md)
   </br>
   &emsp; □ [Code Practice](/NeRF/NeRF.ipynb)
+  </br>
+  &emsp; □ Final Code
 
 
 
 ■ Instant Neural Graphics Primitives with a Multiresolution Hash Encoding (SIGGRAPH 2022) 
 </br>
-&emsp; □ [Paper Summary](/InstantNGP/InstantNGP.md)
+&emsp; □ [Paper Study](/InstantNGP/InstantNGP.md)
 </br>
 &emsp; □ [Code Practice](/InstantNGP/InstantNGP.ipynb)
+</br>
+&emsp; □ Final Code
 
 
 ■ PIFuHD : Multi-Level Pixel Aligned Implicit Function for High-Resolution 3D Human Digitization (CVPR 2020)
 </br>
-&emsp; □ [Paper Summary](/PIFuHD/PIFuHD.md)
+&emsp; □ [Paper Study](/PIFuHD/PIFuHD.md)
 </br>
 &emsp; □ [Code Practice](/PIFuHD/PIFuHD.ipynb)
+</br>
+&emsp; □ Final Code
 
