@@ -48,6 +48,7 @@ NeRF라는 모델이 나오기 전에 View Synthesis를 다루는 모델은 크�
 ### Core Components of NeRF
 ---
 &nbsp; 위에서 설명했던 NeRF의 구성 요소들을 구체적으로 살펴보고자 한다.
+
 </br>
 &nbsp; 처음으로 설명했던 5D Neural Radiance Fields와 MLP network를 알아본다.
 </br>
@@ -59,6 +60,7 @@ NeRF라는 모델이 나오기 전에 View Synthesis를 다루는 모델은 크�
 ![Fig 3 : MLP architecture](./img/NeRF-9.png)
 </br>
 </br>
+
 &nbsp; 두 번째로 설명했던 Classical Volume Rendering과 Stratified Sampling을 살펴본다.
 </br>
 &nbsp; Classical Volume Rendering과 관련된 수식은 다음과 같다. 
@@ -93,6 +95,38 @@ NeRF라는 모델이 나오기 전에 View Synthesis를 다루는 모델은 크�
 ![](./img/NeRF-5.png)
 </br>
 </br>
-&nbsp; $\delta_i = t_{i+1 }- t_i :$  인접한 sample들 간의 거리. $\delta_i$가 작을 수록, 즉, 인접한 sample들의 거리가 가까울 수록 비슷한 density를 예측하므로, $\delta_i$로 조절한다.
+&nbsp; $\delta_i = t_{i+1 }- t_i :$   $(i+1)$번째 sample과 $i$번째 sample 간의 거리. $i$번째 sample의 color에 대한 weight 역할을 함. 
 </br>
-&nbsp; $\alpha_i = 1 - exp(-\sigma_i\delta_i) :$ alpha compositing. 
+&nbsp; $\alpha_i = 1 - exp(-\sigma_i\delta_i) :$  $\sigma_i$는 $i$번째 sample에서 존재하는 입자로 인해 camera ray가 중단될 확률. 이를 $\delta_i$와 곱해 $i$번째 sample 위치에서의 color에 대한 weight를 더 정확히 계산함. 
+</br>
+&nbsp; $\hat{C}(\vec{r})$은 각각의 sample의 color와 color의 weight에 대한 수식이다. 수식에 대한 설명이 부족해 저자들이 인용한 논문인 'Max, N. : Optical models for direct volume rendering'을 참고하는 게 좋을 듯하다.
+</br>
+</br>
+&nbsp; 세 번째로 설명했던, Poisitonal Encoding과 Hierarchical Volume Sampling에 대해 구체적으로 알아본다. 
+</br>
+&nbsp; Positional Encoding과 Hierarchcial Volume Sampling은 고해상도의 복합적인 scene들을 표현하는 데 도움을 준다. 
+</br>
+&nbsp; Positional Encoding과 관련된 수식은 다음과 같다.
+</br>
+</br>
+![](./img/NeRF-6.png)
+</br>
+</br>
+&nbsp; Positional Encoding인 $\gamma$는 $\R$차원의 공간에서 $\R^{2L}$차원의 공간으로 mapping함으로써 MLP가 higher frequency variation를 포함하는 데이터에 잘 맞도록 도와준다. 
+</br>
+&nbsp; Positional Encoding을 사용하지 않은 NeRF는 lower frequency variation에 맞춰져 View Synthesis로 생성된 novel view scene이 oversmooth되는 경향을 보였다.
+</br>
+</br>
+&nbsp; Hiearchcial Volume Sampling과 관련된 수식은 다음과 같다.
+</br>
+</br>
+![](./img/NeRF-7.png)
+</br>
+</br>
+&nbsp; $\hat{C}_c(\vec{r})$ : Coarse Network의 alpha composited color를 의미. alpha composited color는 alpha composition이 반영된 color임. alpha compositing은 opacity (불투명도)와 관련된 alpha channel에 대해 다루는 것으로, 객체를 배경과 자연스러워지도록 만드는 합성 기술임. 
+</br>
+&nbsp; Fine Network의 alpha composited color는 이전에 살펴봤던 $\hat{C}(\vec{r})$으로 구할 수 있다. 
+</br>
+</br>
+### 실험 결과
+---
