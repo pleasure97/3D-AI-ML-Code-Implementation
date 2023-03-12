@@ -168,7 +168,6 @@ $$\vec{d} = (\theta, \phi)$$
 ### 실험
 ---
 </br>
-</br>
 &nbsp; NeRF에 대한 실험에서 쓰인 dataset, 성능 측정 지표 및 실험 결과를 차례대로 살펴보고자 한다.
 </br>
 </br>
@@ -218,7 +217,6 @@ $$\vec{d} = (\theta, \phi)$$
 </br>
 ### 논문의 한계 및 배울 점 
 ---
-</br>
 </br>
 &nbsp; NeRF가 실험 결과 상 state-of-the-art 성능을 보였다고 하더라도 NeRF가 뛰어넘지 못한 한계들이 있다.
 </br>
