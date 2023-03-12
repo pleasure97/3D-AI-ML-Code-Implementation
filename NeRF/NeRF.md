@@ -110,7 +110,7 @@ $$\vec{d} = (\theta, \phi)$$
 ![](./img/NeRF-6.png)
 </br>
 </br>
-&nbsp; Positional Encoding인 $\gamma$는 $\R$차원의 공간에서 $\R^{2L}$차원의 공간으로 mapping함으로써 MLP가 higher frequency variation를 포함하는 데이터에 잘 맞도록 도와준다. 
+&nbsp; Positional Encoding인 $\gamma$는 $R$차원의 공간에서 $R^{2L}$차원의 공간으로 mapping함으로써 MLP가 higher frequency variation를 포함하는 데이터에 잘 맞도록 도와준다. 
 </br>
 &nbsp; Positional Encoding을 사용하지 않은 NeRF는 lower frequency variation에 맞춰져 View Synthesis로 생성된 novel view scene이 oversmooth되는 경향을 보였다.
 </br>
@@ -121,10 +121,72 @@ $$\vec{d} = (\theta, \phi)$$
 ![](./img/NeRF-7.png)
 </br>
 </br>
-&nbsp; $\hat{C}_c(\vec{r})$ : Coarse Network의 alpha composited color를 의미. alpha composited color는 alpha composition이 반영된 color임. alpha compositing은 opacity (불투명도)와 관련된 alpha channel에 대해 다루는 것으로, 객체를 배경과 자연스러워지도록 만드는 합성 기술임. 
+&nbsp; $\hat{C}_c(\vec{r})$ : Coarse Network의 alpha composited color를 의미. alpha composited color는 alpha composition이 반영된 color임. alpha compositing은 opacity (불투명도)와 관련된 alpha channel에 대해 다루는 것으로, 객체를 배경과 자연스러워지도록 만드는 합성 기술이다. 
 </br>
 &nbsp; Fine Network의 alpha composited color는 이전에 살펴봤던 $\hat{C}(\vec{r})$으로 구할 수 있다. 
 </br>
 </br>
-### 실험 결과
+&nbsp; 최종적으로, NeRF의 Coarse Network와 Fine Network를 optimize하는 데 필요한  loss는 다음과 같다.
+&nbsp;
+</br>
+
+ ![](./img/NeRF-8.png)
+</br>
+</br>
+&nbsp; $R$ :  각 batch의 ray들의 집합 
+</br>
+&nbsp; Coarse Network에서 예측한 color와 Fine Network에서 예측한 color를 각각 ground truth color와 뺀 후 제곱하는 Mean Sqaured Error를 사용했다.
+</br>
+</br>
+
+### 실험
 ---
+</br>
+</br>
+&nbsp; NeRF에 대한 실험에서 쓰인 dataset, 성능 측정 지표 및 실험 결과를 차례대로 살펴보고자 한다.
+</br>
+
+&nbsp; NeRF의 성능을 측정하기 위한 실험에서 사용된 dataset으로는 Diffuse Synthetic 360, Realistic Synthetic 360, 그리고 Real Forward-Facing이 있다. 
+</br>
+&nbsp; Diffuse Synthetic 360과 Realistic Synthetic 360 데이터셋 간의 큰 차이는 객체의 표면의 성질 및 해상도의 차이다. Diffuse Syntehtic 360 데이터셋의 객체는 표면의 성질이 람베르트 반사 성질을 지닌 반면, Realistic Synthetic 360 데이터셋의 객체는 람베르트 반사 성질을 지니지 않는다. 람베르트 반사 성질은 어느 시점에서 빛을 발사해도 모든 방향으로 균일하게 반사되는 성질이다.  그리고 Diffuse Synthetic 360 데이터셋의 해상도는 512 X 512인 반면, Realistic Synthetic 360 데이터셋의 해상도는 800 X 800이다.
+</br>
+&nbsp; Real Forward-Facing 데이터셋은 forward-facing camera로 포착된 실제 세상의 이미지로 이루어져 있으며, 해상도는 1008 X 756이다.
+</br>
+</br>
+
+&nbsp; 다음으로, 성능 측정 지표 및 실험 결과에 대해 알아보고자 한다.
+</br>
+</br>
+![](./img/NeRF-12.png)
+</br>
+</br>
+&nbsp; PSNR은 영상의 전송, 압축 등 영상 처리로 인해 발생하는 화질의 손실을 측정하는 지표이다. PSNR은 원본 이미지와 예측 이미지 간 각 픽셀의 오차인 MSE와  한 픽셀이 가지고 있는 정보량인 MAX로 구성되어 있다. 
+</br>
+&nbsp; PSNR에 대한 수식은 다음과 같다.
+</br>
+</br>
+![](./img/NeRF-13.png)
+</br>
+</br>
+&nbsp; SSIM도 PSNR과 마찬가지로 변형된 화질의 손실을 측정하는 지표이다. SSIM은 두 이미지 $x$, $y$의 각각의 밝기인 luminance, 두 이미지 간의 밝기 차이인 contrast, 그리고 두 이미지 간의 상관 관계인 structure로 평가한다.
+</br>
+&nbsp; SSIM에 대한 수식은 다음과 같다.
+</br>
+</br>
+![](./img/NeRF-14.png)
+</br>
+</br>
+&nbsp; LPIPS는 비교하는 두 이미지를 각각 VGG-Net에 넣고, 각 VGG-Net의 intermediate layer의 feature값들의 유사도를 측정하여 평가하는 지표이다.
+</br>
+&nbsp; PSNR, SSIM은 값이 높을수록, LPIPS는 값이 낮을수록, 예측 이미지가 실제 이미지와 유사하다는 뜻이다.
+</br>
+&nbsp; NeRF는 SRN, NV, LLFF 등의 다른 method들과 비교할 때, 성능 측정 지표 상 state-of-the-art의 성능을 보여줌을 알 수 있다.
+</br>
+</br>
+### 논문의 한계 및 배울 점 
+---
+</br>
+&nbsp; NeRF가 실험 결과 상 state-of-the-art 성능을 보였다고 하더라도 NeRF가 뛰어넘지 못한 한계들이 있다.
+</br>
+
+&nbsp; 첫째,  NeRF는 정적인 영상에 대해서만 사용 가능하다는 점이다. 둘째, NeRF는 새로운 관점에서 본 이미지를 생성하기 위해 상대적으로 많은 관점에서의 이미지가 필요하다는 점이다. 그리고 셋째, NeRF의 학습 시간과 추론 시간이 상대적으로 길다는 점이다. 
