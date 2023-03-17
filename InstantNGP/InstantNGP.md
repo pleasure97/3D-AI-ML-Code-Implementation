@@ -4,7 +4,7 @@
 ### 논문의 연구 목적 
 ---
 </br>
-</br>
+
 ![](./img/InstantNGP-1.png)
 </br>
 </br>
