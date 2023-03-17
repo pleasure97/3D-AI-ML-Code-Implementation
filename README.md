@@ -23,8 +23,6 @@
   </br>
   &emsp; □ [Code Practice](/NeRF/NeRF.ipynb)
   </br>
-  &emsp; □ Final Code
-
 
 
 ■ Instant Neural Graphics Primitives with a Multiresolution Hash Encoding (SIGGRAPH 2022) 
@@ -33,7 +31,7 @@
 </br>
 &emsp; □ [Code Practice](/InstantNGP/InstantNGP.ipynb)
 </br>
-&emsp; □ Final Code
+
 
 
 ■ PIFuHD : Multi-Level Pixel Aligned Implicit Function for High-Resolution 3D Human Digitization (CVPR 2020)
@@ -42,5 +40,5 @@
 </br>
 &emsp; □ [Code Practice](/PIFuHD/PIFuHD.ipynb)
 </br>
-&emsp; □ Final Code
+
 
