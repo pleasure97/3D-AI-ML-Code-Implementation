@@ -58,7 +58,7 @@
 &nbsp; 둘째, resolution의 크기에 따라 spatial hash table를 두고, spatial hash table들의 outputs를 concatenate하여 MLP(Multi Layer Perceptron)에 통과시킨다.
 </br>
 </br>
-&nbsp; 셋째, hash function의 hash collision을 일부러 해결하지 않는다. hash function에 의해 만들어지는 hash table에서는 되도록이면 서로 다른  key가 동일한 hash를 가리키지 않아야 한다. 하지만 hash function은 hash의 수가 제한되어 있지만 무한히 key가 생성될 수 있는 함수이기 때문에, 비둘기집의 원리에 의해 필연적으로 서로 다른 key가 같은 hash를 가리키는 문제가 발생할 수밖에 없다. 이를 hash collision이라고 한다. 그래서 일반적으로 hash function을 사용할 때는 어떻게든 hash collision을 최소화하려고 한다. 하지만 논문의 저자들은 일부러 hash collision을 해결하지 않는다. hash collision을 해결하지 않아도 spatial hash table들의 output vector들이 MLP에 통과되면, MLP가 backpropgation 과정에서 update에 중요한 hash entry 구분해내기 때문이다.
+&nbsp; 셋째, hash function의 hash collision을 일부러 해결하지 않는다. hash function에 의해 만들어지는 hash table에서는 되도록이면 서로 다른  key가 동일한 hash를 가리키지 않아야 한다. 하지만 hash function아 hash의 수가 제한되어 있지만 무한히 key가 생성될 수 있는 함수이기 때문에, 비둘기집의 원리에 의해 필연적으로 서로 다른 key가 같은 hash를 가리키는 문제가 발생한다. 위와 같은 hash function의 문제를 hash collision이라고 한다. 그래서 일반적으로 hash function을 사용할 때는 어떻게든 hash collision을 최소화하려고 한다. 하지만 논문의 저자들은 일부러 hash collision을 해결하지 않는다. hash collision을 해결하지 않아도 spatial hash table들의 output vector들이 MLP에 통과되면, MLP가 backpropgation 과정에서 update에 중요한 hash entry를 구분해내기 때문이다.
 </br>
 </br>
 &nbsp; **Multiresolution Hash Encoding의 특징에 따라 다음과 같은 장점을 지닌다.**
@@ -77,6 +77,52 @@
 ![](./img/InstantNGP-2.png)
 </br>
 </br>
+&nbsp; **InstantNGP의 핵심 구성 요소는 Multiresolution hash encoding과 Fully connected neural network이다.**
+</br>
+&nbsp; 우선, Multiresolution hash encoding과 Fully Connected neural network에 대한 수식과 관련된 용어들을 살펴보고자 한다.
+</br>
+&nbsp; -  $x$ : Multiresolution Hash encoding의  입력 좌표 
+</br>
+&nbsp; - $\theta$ : Multiresolution Hash encoding의 학습 가능한 parameters
+</br>
+&nbsp; - $y = enc(x, \theta)$ :  $x$와 $\theta$에 대한 Multiresolution Hash encoding
+</br>
+&nbsp; - $\Phi$ : Fully connected Neural Network의 학습 가능한 parameters
+</br>
+&nbsp; - $m(y, \Phi)$ : Fully Connected Neural Network에 대한 수식
+</br>
+
+![](./img/InstantNGP-3.png)
+</br>
+</br>
+&nbsp; - $L$ : Multiresolution Hash Table의 총 개수 (= Multiresolution Hash Table의 Level)
+</br>
+&nbsp; - $T$ : Multiresolution Hash Table의 크기 (= Multiresolution Hash Table의 Level별 최대 entry 수)
+</br>
+&nbsp; - $F$ : Multiresolution Hash Table의 entry별 feature 수
+</br>
+&nbsp; - $N_{min}$ : Multiresolution Hash table의 resolution 중 가장 낮은 resolution의 크기
+</br>
+&nbsp; - $N_{max}$ : Multiresolution Hash table의 resolution 중 가장 큰 resolution의 크기
+
+</br>
+
+![](./img/InstantNGP-4.png)
+</br>
+</br>
+&nbsp; - $b \in [1.26, 2]$ : Multiresolution Hash table의 resolution에 대한 growth factor
+</br>
+&nbsp; - $N_l$ : $N_{min}$과 $b$로 결정되는 각 level별 Hash table의 resolution 크기
+</br>
+
+![](./img/InstantNGP-5.png)
+</br>
+</br>
+&nbsp; - $d$ : 입력 좌표 $x$의 차원 수 
+</br>
+&nbsp;  - $\pi_i$ : $x_i$와 bit-wise XOR operation할 큰 소수 
+</br>
+&nbsp; - $\pi_1 := 1$, $\pi_2 := 2,654,435,761$ , $\pi_3 := 805, 459, 861$
 
 ### Technical details of InstantNGP
 ---
