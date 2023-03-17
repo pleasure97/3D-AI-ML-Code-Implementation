@@ -4,6 +4,10 @@
 ### 논문의 연구 목적 
 ---
 </br>
+</br>
+![](./img/InstantNGP-1.png)
+</br>
+</br>
 &nbsp; InstantNGP는 Neural Graphics Primitives 분야에서 Multiresolution Hash Encoding이라는 Input Encoding을 도입해 최적화된 accuracy와 training, inference speed를 내는 것을 목표한다.
 </br>
 </br>
@@ -18,7 +22,7 @@
 </br>
 &nbsp; 세 번째는,  Neural Radiance Caching으로 feature buffers를 활용해 사진과 같이 현실적인 pixel color들을 예측해내는 분야이다.
 </br>
-&nbsp; 네 번째는, Neural Radiance and Density Fields (NeRF)으로 3D spatial density function과 2D directional emssion function으로 새로운 관점에서의 이미지를 생성해내는 분야이다.
+&nbsp; 네 번째는, Neural Radiance and Density Fields (NeRF)으로 5D spatial-directional function으로 새로운 관점에서의 이미지를 생성해내는 분야이다.
 
 ### 선행 연구의 한계
 ---
