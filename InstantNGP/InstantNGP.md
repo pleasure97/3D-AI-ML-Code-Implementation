@@ -147,6 +147,7 @@
 &nbsp; InstantNGP의 Multiresolution Hash encoding으로 발생하는 특징들, 그리고 hyperparameter에 대한 구체적인 설정들을 살펴보고자 한다.
 </br>
 </br>
+
 &nbsp; **우선, InstantNGP의 Multiresolution Hash encoding으로 발생하는 특징들에 대해 알아보고자 한다.**
 </br>
 
@@ -192,14 +193,14 @@
 </br>
 </br>
 
-![](./img/InstantNGP-7.png)
+![](./img/InstantNGP-7.jpg)
 </br>
 </br>
 &nbsp; 그리고, Neural Radiance Caching에 대한 실험의 결과값이다.
 </br>
 </br>
 
-![](./img/InstantNGP-8.png)
+![](./img/InstantNGP-8.jpg)
 </br>
 </br>
 &nbsp; 마지막으로, Neural Radiance and Density Fields에 대한 실험의 결과값이다.
