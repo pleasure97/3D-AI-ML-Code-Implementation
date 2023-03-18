@@ -162,10 +162,54 @@
 &nbsp; **다음으로, InstantNGP의 hyperaparameter에 대한 구체적인 설정을 알아보고자 한다.**
 </br>
 </br>
-&nbsp; 
+&nbsp; 첫째, inference와 backpropagation performance를 최적화하기 위한 hyperparameter에 대한 설정이다. 먼저, Hash table entry를 half precision으로 저장하되 parametes에 대한 복사본은 full precision으로 저장해 mixed-precision parameter update를 하였다. 다음으로, coarse resolution hash table부터 시작해 resolution 순으로 연속적으로 GPU cache에 저장해 GPU cache를 효율적으로 사용했다. 그리고 feature vector의 차원 수인 $F$는 작을수록 cache locality를 살려 성능을 향상할 수 있고, 클 수록 memory coherence를 살려 성능을 향상할 수 있기 때문에 $F$가 2일 때 최적이라고 한다.
+</br>
+&nbsp; 둘째, Fully connected neural network의 hyperparameter에 대한 설정이다. NeRF를 다루는 neural network를 제외하고, 일반적으로 2개의 hidden layer은 각각 64개의 neuron으로 이루어져 있고, 활성화 함수는 ReLU이다. Fully connected neural network는 zero-initialization이나 uniform distribution $u(-10^{-4}, 10^{-4})$으로 네트워크를 초기화한다. 그리고 네트워크 가중치에 weak L2 regularization을 두어 오랜 학습 기간 후 발산하는 것을 방지한다. 
+</br>
+&nbsp; 셋째, gradient descent를 위해 필요한 optimizer, Adam의 hyperparameter에 대한 설정이다. Adam의 hyperparameter로 $\beta_1 = 0.9$, $\beta_2 = 0.99$, $\epsilon = 10^{-15}$을 사용하는데, 특히 $\epsilon$이 default값보다 훨씬 작다. $\epsilon$이 훨씬 작은 이유는 hash table entry에 대한 gradient 값이 sparse하고 weak할 때 수렴을 가속화하기 위해서이다. 그리고 gradient 값이 0인 hash table entry에 대해선 Adam을 적용하지 않는다. 
+</br>
+&nbsp; 넷째, 학습에 필요한 loss function에 대한 설정이다. GigaPixel Image와 NeRF에 대해선 L2 loss를 적용하고, Signed Distance Functions에 대해선 MAPE를 적용하고, Neural Radiance Caching에 대해선 luminance-relative L2 loss를 적용했다.
+
 	
 ### 실험
 ---
+</br>
+&nbsp; 분야별 실험의 결과값을 논문의 표 혹은 직접 정리한 표로 설명해보고자 한다.
+</br>
+</br>
+&nbsp; 먼저, GigaPixel Image Approximation에 대한 실험의 결과값이다.
+</br>
+</br>
+
+|  |ACORN  | InstantNGP |
+|--|--|--|
+|DATASET |TOKYO panorma|TOKYO panorma  |
+|PSNR |38.59 dB |41.9 dB |
+|TRAINING TIME| 36.9 h |4 min  |
+</br>
+</br>
+&nbsp; 다음으로, Signed Distance Functions에 대한 실험의 결과값이다.
+</br>
+</br>
+
+![](./img/InstantNGP-7.png)
+</br>
+</br>
+&nbsp; 그리고, Neural Radiance Caching에 대한 실험의 결과값이다.
+</br>
+</br>
+
+![](./img/InstantNGP-8.png)
+</br>
+</br>
+&nbsp; 마지막으로, Neural Radiance and Density Fields에 대한 실험의 결과값이다.
+</br>
+</br>
+
+![](./img/InstantNGP-6.png)
+</br>
+</br>
+
 
 
 
