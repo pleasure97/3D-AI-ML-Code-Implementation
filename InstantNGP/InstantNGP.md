@@ -81,11 +81,11 @@
 </br>
 &nbsp; 우선, Multiresolution hash encoding과 Fully Connected neural network에 대한 수식과 관련된 용어들을 살펴보고자 한다.
 </br>
-&nbsp; -  $x$ : Multiresolution Hash encoding의  입력 좌표 
+&nbsp; -  $\vec{x}$ : Multiresolution Hash encoding의  입력 좌표 
 </br>
 &nbsp; - $\theta$ : Multiresolution Hash encoding의 학습 가능한 parameters
 </br>
-&nbsp; - $y = enc(x, \theta)$ :  $x$와 $\theta$에 대한 Multiresolution Hash encoding
+&nbsp; - $\vec{y} = enc(\vec{x,} \theta)$ :  $\vec{x}$와 $\theta$에 대한 Multiresolution Hash encoding
 </br>
 &nbsp; - $\Phi$ : Fully connected Neural Network의 학습 가능한 parameters
 </br>
@@ -104,6 +104,8 @@
 &nbsp; - $N_{min}$ : Multiresolution Hash table의 resolution 중 가장 낮은 resolution의 크기
 </br>
 &nbsp; - $N_{max}$ : Multiresolution Hash table의 resolution 중 가장 큰 resolution의 크기
+</br>
+&nbsp; - $\xi \in R^{E}$ : neural network 이전에 concatenate될 때 추가되는 입력 데이터 (e.g., neural radiance changing에서 view direction과 textures)
 
 </br>
 
@@ -123,8 +125,49 @@
 &nbsp;  - $\pi_i$ : $x_i$와 bit-wise XOR operation할 큰 소수 
 </br>
 &nbsp; - $\pi_1 := 1$, $\pi_2 := 2,654,435,761$ , $\pi_3 := 805, 459, 861$
+</br>
+</br>
+&nbsp; 수식에서 사용되는 용어들에 대해 이해했으니, 다음으로 **Multiresolution Hash encoding과 Fully connected neural network가 작동하는 방식에 대해 알아보고자 한다.**
+</br>
+</br>
+&nbsp;  첫째, 총 $L$개의 resolution level으로 이루어진  hash table마다  각각 $\vec{x}$를 hashing하여 $\vec{x}$의 corner에 index들을 할당한다.
+</br>
+&nbsp; 둘째, resolution level별로 각각 corner의 index들을 $F$ 차원의 벡터로 이루어진 hash table에 저장한다. 
+</br>
+&nbsp; 셋째,  $x$의 상대적 위치를 고려해 hash table에 저장된 index들을 선형 보간한다.
+</br>
+&nbsp; 넷째, 각 resolution level별로 선형 보간된 feature vector 및 부가적인 입력 데이터 $\xi$를 concatenate하여 neural network $m(y, \Phi)$에 학습시킨다.
+</br>
+&nbsp; 다섯째, $m(y, \Phi)$,  concatenated inputs, linearly interpolated inputs, 그리고 looked-up feature vectors에 backpropagation이 적용된다. 
+</br>
 
 ### Technical details of InstantNGP
 ---
+</br>
+&nbsp; InstantNGP의 Multiresolution Hash encoding으로 발생하는 특징들, 그리고 hyperparameter에 대한 구체적인 설정들을 살펴보고자 한다.
+</br>
+</br>
+&nbsp; **우선, InstantNGP의 Multiresolution Hash encoding으로 발생하는 특징들에 대해 알아보고자 한다.**
+</br>
+
+&nbsp; 첫째, Multiresolution Hash encoding의 설정에 따라 performance-quality tradeoff가 발생한다. Hash table의 크기 $T$,  Hash table의 레벨 수인 $L$, 그리고 feature의 차원 수인 $F$가 클수록 quality는 높아지지만, performance는 떨어진다. 논문의 저자들은 $T$를 $2^{14}$에서 $2^{24}$의 값으로, $L$을 16, $F$를 2의 값으로 설정하기를 권장한다.
+</br>
+&nbsp; 둘째, Multiresolution hash encoding이 hash collision 문제를 내부적으로 해결한다. coarse level resolution에서는 hash collision이 없는 반면, fine level resolution은 세세한 feature들도 포착하기 때문에 hash collision이 비교적 많이 발생한다. 하지만 학습 과정에서 빈 공간의 점보다 visibility나 density가 높은 점에서 gradient의 변화가 커 hash table entry들에 더 큰 영향을 미친다. 그로 인해 가중치가 높은 점을 반영하도록 table entry가 최적화되므로 자연스럽게 hash collision 문제가 해결된다.
+</br>
+&nbsp; 셋째, Multiresolution hash encoding은 학습 과정 중에 학습 데이터 분포에 자동적으로 적응하는 online adaptivity 특성을 지닌다. task-specific한 데이터 구조가 학습 중에 띄엄띄엄 배우는 것과 달리, multiresolution hash encoding은 hash collision을 줄이고, 더 정확한 함수를 학습할 수 있다.
+</br>
+&nbsp; 넷째, hash table entry들을 선형 보간함으로써 더 좋은 quality의 결과 데이터를 생성할 수 있다. 선형 보간 부분이 없더라도 encoding과 neural network 모두 연속함수이기 때문에 chain rule에 따른 미분이 가능하다. 하지만 hash table entry들을 선형 보간하지 않으면 선명도와 디테일이 떨어져 pixel들이 덩어리진, 즉, blocky한 appearance를 생성해낸다. 
+</br>
+</br>
+&nbsp; **다음으로, InstantNGP의 hyperaparameter에 대한 구체적인 설정을 알아보고자 한다.**
+</br>
+</br>
+&nbsp; 
+	
+### 실험
+---
+
+
+
 ### 논문의 한계 및 배울 점 
 ---
