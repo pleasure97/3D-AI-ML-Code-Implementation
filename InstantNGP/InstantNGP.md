@@ -79,6 +79,7 @@
 </br>
 &nbsp; **InstantNGP의 핵심 구성 요소는 Multiresolution hash encoding과 Fully connected neural network이다.**
 </br>
+</br>
 &nbsp; 우선, Multiresolution hash encoding과 Fully Connected neural network에 대한 수식과 관련된 용어들을 살펴보고자 한다.
 </br>
 &nbsp; -  $\vec{x}$ : Multiresolution Hash encoding의  입력 좌표 
@@ -150,12 +151,15 @@
 
 &nbsp; **우선, InstantNGP의 Multiresolution Hash encoding으로 발생하는 특징들에 대해 알아보고자 한다.**
 </br>
-
-&nbsp; 첫째, Multiresolution Hash encoding의 설정에 따라 performance-quality tradeoff가 발생한다. Hash table의 크기 $T$,  Hash table의 레벨 수인 $L$, 그리고 feature의 차원 수인 $F$가 클수록 quality는 높아지지만, performance는 떨어진다. 논문의 저자들은 $T$를 $2^{14}$에서 $2^{24}$의 값으로, $L$을 16, $F$를 2의 값으로 설정하기를 권장한다.
+</br>
+&nbsp; 첫째, Multiresolution Hash encoding의 설정에 따라 performance-quality tradeoff가 발생한다. Hash table의 크기 $T$,  Hash table의 레벨 수인 $L$, 그리고 ,feature의 차원 수인 $F$가 클수록 quality는 높아지지만, performance는 떨어진다. 논문의 저자들은 $T$를 $2^{14}$에서 $2^{24}$의 값으로, $L$을 16, $F$를 2의 값으로 설정하기를 권장한다.
+</br>
 </br>
 &nbsp; 둘째, Multiresolution hash encoding이 hash collision 문제를 내부적으로 해결한다. coarse level resolution에서는 hash collision이 없는 반면, fine level resolution은 세세한 feature들도 포착하기 때문에 hash collision이 비교적 많이 발생한다. 하지만 학습 과정에서 빈 공간의 점보다 visibility나 density가 높은 점에서 gradient의 변화가 커 hash table entry들에 더 큰 영향을 미친다. 그로 인해 가중치가 높은 점을 반영하도록 table entry가 최적화되므로 자연스럽게 hash collision 문제가 해결된다.
 </br>
+</br>
 &nbsp; 셋째, Multiresolution hash encoding은 학습 과정 중에 학습 데이터 분포에 자동적으로 적응하는 online adaptivity 특성을 지닌다. task-specific한 데이터 구조가 학습 중에 띄엄띄엄 배우는 것과 달리, multiresolution hash encoding은 hash collision을 줄이고, 더 정확한 함수를 학습할 수 있다.
+</br>
 </br>
 &nbsp; 넷째, hash table entry들을 선형 보간함으로써 더 좋은 quality의 결과 데이터를 생성할 수 있다. 선형 보간 부분이 없더라도 encoding과 neural network 모두 연속함수이기 때문에 chain rule에 따른 미분이 가능하다. 하지만 hash table entry들을 선형 보간하지 않으면 선명도와 디테일이 떨어져 pixel들이 덩어리진, 즉, blocky한 appearance를 생성해낸다. 
 </br>
@@ -165,12 +169,16 @@
 </br>
 &nbsp; 첫째, inference와 backpropagation performance를 최적화하기 위한 hyperparameter에 대한 설정이다. 먼저, Hash table entry를 half precision으로 저장하되 parametes에 대한 복사본은 full precision으로 저장해 mixed-precision parameter update를 하였다. 다음으로, coarse resolution hash table부터 시작해 resolution 순으로 연속적으로 GPU cache에 저장해 GPU cache를 효율적으로 사용했다. 그리고 feature vector의 차원 수인 $F$는 작을수록 cache locality를 살려 성능을 향상할 수 있고, 클 수록 memory coherence를 살려 성능을 향상할 수 있기 때문에 $F$가 2일 때 최적이라고 한다.
 </br>
+</br>
 &nbsp; 둘째, Fully connected neural network의 hyperparameter에 대한 설정이다. NeRF를 다루는 neural network를 제외하고, 일반적으로 2개의 hidden layer은 각각 64개의 neuron으로 이루어져 있고, 활성화 함수는 ReLU이다. Fully connected neural network는 zero-initialization이나 uniform distribution $u(-10^{-4}, 10^{-4})$으로 네트워크를 초기화한다. 그리고 네트워크 가중치에 weak L2 regularization을 두어 오랜 학습 기간 후 발산하는 것을 방지한다. 
+</br>
 </br>
 &nbsp; 셋째, gradient descent를 위해 필요한 optimizer, Adam의 hyperparameter에 대한 설정이다. Adam의 hyperparameter로 $\beta_1 = 0.9$, $\beta_2 = 0.99$, $\epsilon = 10^{-15}$을 사용하는데, 특히 $\epsilon$이 default값보다 훨씬 작다. $\epsilon$이 훨씬 작은 이유는 hash table entry에 대한 gradient 값이 sparse하고 weak할 때 수렴을 가속화하기 위해서이다. 그리고 gradient 값이 0인 hash table entry에 대해선 Adam을 적용하지 않는다. 
 </br>
+</br>
 &nbsp; 넷째, 학습에 필요한 loss function에 대한 설정이다. GigaPixel Image와 NeRF에 대해선 L2 loss를 적용하고, Signed Distance Functions에 대해선 MAPE를 적용하고, Neural Radiance Caching에 대해선 luminance-relative L2 loss를 적용했다.
-
+</br>
+</br>
 	
 ### 실험
 ---
