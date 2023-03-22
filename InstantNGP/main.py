@@ -1,14 +1,26 @@
 import configargparse
 
-def batchify(data, batch_size):
+def batchify(network, images, batch_size):
     '''
-    Returns a dataset divided by the batch size.      
+    Returns a network entered by the batch size.      
     '''
-    
     assert batch_size is not None
     
-    return torch.cat([
+    return torch.cat([network(images[i : i + batch_size]) for i in range(0, images.shape(0), batch_size)], 0)
 
+
+def run_network(images, rays_d, network, encoding = get_multires_hash_encoding(args), batch_size = 2 ** 16):
+    
+    images_flattened = torch.reshape(images, [-1, images.shape[-1]])
+    
+    embedded, out_dim = encoding(images_flattened)
+    
+    d_expanded = rays_d[:, None].expand(images.shape)
+    
+    d_flattened = 
+    
+    
+    
 def config_parser():
 
     parser = configargparse.ArgumentParser()
