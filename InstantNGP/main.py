@@ -1,12 +1,17 @@
 import configargparse
 
-def batchify(network, images, batch_size):
+def batchify_network(network, batch_size):
     '''
     Returns a network entered by the batch size.      
     '''
     assert batch_size is not None
     
-    return torch.cat([network(images[i : i + batch_size]) for i in range(0, images.shape(0), batch_size)], 0)
+    def batchify(embedding):
+        
+        return torch.cat([network(embedding[i : i + batch_size]) for i in range(0, embedding.shape(0), batch_size)], 0)
+
+    return batchify
+
 
 
 def run_network(images, rays_d, network, encoding = get_multires_hash_encoding(args), batch_size = 2 ** 16):
@@ -15,10 +20,149 @@ def run_network(images, rays_d, network, encoding = get_multires_hash_encoding(a
     
     embedded, out_dim = encoding(images_flattened)
     
+    #
+    
     d_expanded = rays_d[:, None].expand(images.shape)
     
-    d_flattened = 
+    #
     
+    d_flattened = torch.reshape(d_expanded, [-1, d_expanded.shape[-1]])
+    
+    #
+    
+    d_embedded = torch.cat([embedded, d_flattened], -1)
+    
+    network_output = batchify_network(network, batch_size)(d_embedded)
+    
+    network_output[~out_dim,-1] = 0
+    
+    output = torch.reshape(network_output, list(images.shape[:-1]) + [network_output.shape[-1]])
+    
+    return output
+
+
+    
+def batchify_rays(r_flattened, batch_size = 2 ** 16, **kwargs):
+    
+    '''
+    Render rays in smaller minibatches to avoid out of memory.
+    '''
+    
+    r_dict = {}
+    
+    for i in range(0, r_flattened.shape[0], batch_size):
+        
+        rays = render_rays(r_flattend[i : i + batch_size], **kwargs)
+        
+        for ray in rays:
+            
+            if ray not in r_dict:
+                
+                r_dict[ray] = []
+             
+            r_dict[ray].append(rays[ray])
+     
+    r_dict = {r : torch.cat(ray_dict[r], 0) for r in r_dict}
+        
+    return r_dict
+
+def raw2outputs(raw, z_intervals, raw_noise_std = 0., white_background = False):
+    '''
+    Transforms model's predictions to semantically meaningful values.
+    Args:
+        raw: [num_rays, num_samples along ray, 4]. Prediction from model.
+        z_intervals: [num_rays, num_samples along ray]. Integration time.
+        rays_d: [num_rays, 3]. Direction of each ray.
+    Returns:
+        rgb_map: [num_rays, 3]. Estimated RGB color of a ray.
+        disp_map: [num_rays]. Disparity map. Inverse of depth map.
+        acc_map: [num_rays]. Sum of weights along each ray.
+        weights: [num_rays, num_samples]. Weights assigned to each sampled color.
+        depth_map: [num_rays]. Estimated distance to object.
+    '''
+
+    dists = z_intervals[..., 1:] - z_intervals[..., :-1]
+    
+    dists = torch.cat([dists, torch.Tensor([1e10]).expand(dists[..., :1].shape)], -1)
+    
+    
+
+    def raw2alpha(raw, dists, activation = F.relu):
+        return 1.- torch.exp(-activation(raw) * dists)
+    
+
+def render_rays(r_batched, network, query, num_samples, embedding = None, include_raw = False, \
+                perturb = 0., num_importance = 0, fine_network = None, \
+                white_background = True ,raw_noise_std = 0., verbose = False):
+    
+    '''
+    Volumetric rendering.
+    Args:
+      r_batched : array of shape [batch_size, ...]. All information necessary
+        for sampling along a ray, including: ray origin, ray direction, min
+        dist, max dist, and unit-magnitude viewing direction.
+      network: function. Model for predicting RGB and density at each point
+        in space.
+      query : function used for passing queries to network_fn.
+      num_samples : int. Number of different times to sample along each ray.
+      include_raw : bool. If True, include model's raw, unprocessed predictions.
+      perturb : float, 0 or 1. If non-zero, each ray is sampled at stratified
+        random points in time.
+      num_importance : int. Number of additional times to sample along each ray.
+        These samples are only passed to network_fine.
+      fine_network : "fine" network with same spec as network_fn.
+      white_bkgd: bool. If True, assume a white background.
+      raw_noise_std : ...
+      verbose : bool. If True, print more debugging info.
+    Returns:
+      rgb_map : [num_rays, 3]. Estimated RGB color of a ray. Comes from fine model.
+      disp_map : [num_rays]. Disparity map. 1 / depth.
+      acc_map : [num_rays]. Accumulated opacity along each ray. Comes from fine model.
+      raw : [num_rays, num_samples, 4]. Raw predictions from model.
+      rgb0 : See rgb_map. Output for coarse model.
+      disp0 : See disp_map. Output for coarse model.
+      acc0 : See acc_map. Output for coarse model.
+      z_std : [num_rays]. Standard deviation of distances along ray for each sample.
+    '''
+    
+    #
+    num_rays = r_batched.shape[0]
+    rays_o, rays_d = r_batched[:, :3], r_batched[:, 3:6]
+    
+    #
+    viewdirs = r_batched[:, -3:] if r_batched.shape[-1] > 8 else None
+    bounds = torch.reshape(r_batched[..., 6:8], [-1, 1, 2])
+    near, far = bounds[..., 0], bounds[...,1]
+    
+    #
+    sample_intervals = torch.linspace(0., 1., num_samples)
+    
+    z_intervals =  near * (1. - sample_intervals) + far * (sample_intervals)
+    
+    z_intervals = z_intervals.expand([num_rays, num_samples])
+    
+    #
+    if perturb > 0. :
+        
+        mid = .5 * (z_intervals[..., 1:] + z_intervals[..., :-1])
+        upper = torch.cat([mid, z_intervals[-1:]], -1)
+        lower = torch.cat([z_intervals[..., :1], mid], -1)
+        
+        stratified_samples = torch.rand(z_intervals.shape)
+        
+        z_intervals = lower + (upper - lower) * stratified_samples
+        
+    #
+    
+    points = rays_o[..., None, :] + rays_d[..., None, :] * z_intervals[..., :, None]
+    
+    #
+    
+    raw = query(points, viewdirs, network)
+    
+    
+    
+
     
     
 def config_parser():
