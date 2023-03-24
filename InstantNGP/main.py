@@ -66,12 +66,12 @@ def batchify_rays(r_flattened, batch_size = 2 ** 16, **kwargs):
         
     return r_dict
 
-def raw2outputs(raw, z_intervals, raw_noise_std = 0., white_background = False):
+def raw2outputs(raw, delta, raw_noise_std = 0., white_background = False):
     '''
     Transforms model's predictions to semantically meaningful values.
     Args:
         raw: [num_rays, num_samples along ray, 4]. Prediction from model.
-        z_intervals: [num_rays, num_samples along ray]. Integration time.
+        delta: [num_rays, num_samples along ray]. Integration time.
         rays_d: [num_rays, 3]. Direction of each ray.
     Returns:
         rgb_map: [num_rays, 3]. Estimated RGB color of a ray.
@@ -81,15 +81,49 @@ def raw2outputs(raw, z_intervals, raw_noise_std = 0., white_background = False):
         depth_map: [num_rays]. Estimated distance to object.
     '''
 
-    dists = z_intervals[..., 1:] - z_intervals[..., :-1]
+    #
+    
+    dists = delta[..., 1:] - delta[..., :-1]
     
     dists = torch.cat([dists, torch.Tensor([1e10]).expand(dists[..., :1].shape)], -1)
     
+    dists *= torch.norm(rays_d[..., None, :], dim = -1)
     
-
+    #
+    
+    c_i = torch.sigmoid(raw[..., :3])
+    
+    if raw_noise_std > 0.:
+        
+        noise = torch.randn(raw[..., 3].shape) * raw_noise_std
+        
+    else :
+        
+        noise = 0.
+        
     def raw2alpha(raw, dists, activation = F.relu):
+        
         return 1.- torch.exp(-activation(raw) * dists)
     
+    #
+    
+    alpha = raw2alpha(raw[..., 3] + noise, dists)
+    
+    w_i = alpha * torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1)), 1. - alpha + 1e-10],-1),-1)[:. :-1]
+    
+    c_r = torch.sum(w_i[..., None] * c_i, -2)
+    
+    #
+    
+    depth_map = torch.sum(w_i * delta, -1) / torch.sum(w_i, -1)
+    
+    disparity_map = 1. / torch.max(1e-10 * torch.ones_like(depth_map), depth_map)
+    
+    accumulated_map = torch.sum(weights, -1)
+    
+    #
+    
+    entropy = Categorical(probs = torch.cat([w_i, 1. - w_i.sum(-1, keepdims = True) + 1e-6], dim = -1).entropy()
 
 def render_rays(r_batched, network, query, num_samples, embedding = None, include_raw = False, \
                 perturb = 0., num_importance = 0, fine_network = None, \
@@ -137,24 +171,24 @@ def render_rays(r_batched, network, query, num_samples, embedding = None, includ
     #
     sample_intervals = torch.linspace(0., 1., num_samples)
     
-    z_intervals =  near * (1. - sample_intervals) + far * (sample_intervals)
+    delta =  near * (1. - sample_intervals) + far * (sample_intervals)
     
-    z_intervals = z_intervals.expand([num_rays, num_samples])
+    delta = delta.expand([num_rays, num_samples])
     
     #
     if perturb > 0. :
         
-        mid = .5 * (z_intervals[..., 1:] + z_intervals[..., :-1])
-        upper = torch.cat([mid, z_intervals[-1:]], -1)
-        lower = torch.cat([z_intervals[..., :1], mid], -1)
+        mid = .5 * (delta[..., 1:] + delta[..., :-1])
+        upper = torch.cat([mid, delta[-1:]], -1)
+        lower = torch.cat([delta[..., :1], mid], -1)
         
-        stratified_samples = torch.rand(z_intervals.shape)
+        stratified_samples = torch.rand(delta.shape)
         
-        z_intervals = lower + (upper - lower) * stratified_samples
+        delta = lower + (upper - lower) * stratified_samples
         
     #
     
-    points = rays_o[..., None, :] + rays_d[..., None, :] * z_intervals[..., :, None]
+    points = rays_o[..., None, :] + rays_d[..., None, :] * delta[..., :, None]
     
     #
     
