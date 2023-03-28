@@ -1,5 +1,4 @@
-## PIFuHD 
-## : Multi-Level Pixel-Aligned Implicit Function for High-Resolution 3D Human Digitization 
+## PIFuHD : Multi-Level Pixel-Aligned Implicit Function for High-Resolution 3D Human Digitization 
 
 
 ### 논문의 연구 목적 
