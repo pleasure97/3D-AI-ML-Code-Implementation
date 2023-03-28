@@ -100,6 +100,41 @@
 &nbsp; - $g$ : Multilayer Perceptron 함수. 달라지는 ray의 depth $Z$에 주의해 3D 점들의 occupancy를 분별해야 함. 
 
 </br>
+</br>
+
+&nbsp; 둘째, PIFuHD는 Multi-level PIFu를 사용해 기존의 PIFu의 단점을 보완했다. 하나의 PIFu로는 512 X 512에서 128 X 128 정도의 이미지 해상도로 제한된다. 저자들은 1024 X 1024 정도의 해상도로 3D Human Digitization하기 위해선 network의 구조가 top-down 구조이되, 각 level이 연결될 수 있는 intermediate supervision이 필요하다고 주장한다.  Multi-level PIFu의 모듈들을 구체적으로 살펴보고자 한다. 
+
+</br>
+
+![](./img/PIFuHD-5.jpg)
+
+</br>
+
+&nbsp; - $I_L$ : 해상도를 낮춘 입력 이미지 
+
+</br>
+
+&nbsp; - $F_L$ : 앞면에 대한 예측된 normal map  / $B_L$ : 뒷면에 대한 예측된 normal map
+
+</br>
+
+&nbsp; - $x_L$ :  이미지 공간 $I_L$에서 투사된 2d location
+
+</br>
+
+![](./img/PIFuHD-6.jpg)
+
+</br>
+
+&nbsp; - $\Omega(X)$ : coarse level network에서 추출된 3D 임베딩. 
+
+</br>
+
+&nbsp; 위에서의 수식들을 바탕으로 Multi-level PIFu에서 coarse level network와 fine level network의 차이를 알아보고자 한다. coarse level network는 512 X 512 해상도의 입력 이미지를 128 X 128 해상도의 feature들로 생성해내 전반적인 기하학적 정보 수집에 목표를 두고 있는 반면, fine level network는 1024 X 1024 해상도의 입력 이미지를 512 X 512 해상도의 feature들로 생성해 더 미묘한 디테일들을 잡아내는 데 집중한다. 그리고 fine network는 coarse level network에서 생성된 $\Omega(X)$를 입력으로 받기 때문에 구체적인 정보 포착에만 전념할 수 있다.
+
+</br>
+</br>
+
 
 
 
