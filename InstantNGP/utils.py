@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+
 def get_multires_hash_encoding(args, encoder=HashEncoder):
     '''
     Returns a multiresolutional hash encoding and output dimension.
@@ -15,16 +16,16 @@ def get_multires_hash_encoding(args, encoder=HashEncoder):
     return embedded, out_dim
 
 
-def hierarchical_sampling(bins, w_i, num_samples, use_uniform=False):
+def hierarchical_sampling(bins, w_i, num_coarse_samples, use_uniform=False):
     pdf = (w_i + 1e-5) / torch.sum(w_i, -1, keepdim=True)
     cdf = torch.cumsum(pdf, -1)
     cdf = torch.cat([torch.zeros_like(cdf[..., :1]), cdf], -1)
 
     if use_uniform:
-        u = torch.linspace(0., 1., num_samples)
-        u = u.expand(list(cdf.shape[:-1]) + [num_samples])
+        u = torch.linspace(0., 1., num_coarse_samples)
+        u = u.expand(list(cdf.shape[:-1]) + [num_coarse_samples])
     else:
-        u = torch.rand(list(cdf.shape[:-1]) + [num_samples])
+        u = torch.rand(list(cdf.shape[:-1]) + [num_coarse_samples])
 
     u = u.contiguous()
 
@@ -54,12 +55,23 @@ def get_rays(height, width, K, cam2world):
     i = i.t()
     j = j.t()
 
-    dirs = torch.stack([(i - K[0][2]) / K[0][0], -(j-K[1][2]) / K[1][1], -torch.ones_like(i)], -1)
+    dirs = torch.stack([(i - K[0][2]) / K[0][0], -(j - K[1][2]) / K[1][1], -torch.ones_like(i)], -1)
 
     # Rotate ray directions from camera frame to the world frame
     rays_d = torch.sum(dirs[..., None, :] * cam2world[:3, :3], -1)
     # Translate camera frame's origin
     rays_o = cam2world[:3, -1].expand(rays_d.shape)
+
+    return rays_o, rays_d
+
+
+def get_rays_np(height, width, K, c2w):
+    i, j = np.meshgrid(np.arange(width, dtype=np.float32), np.arange(height, dtype=np.float32), indexing='xy')
+    dirs = np.stack([(i - K[0][2]), - (j - K[1][2]) / K[1][1], -np.ones_like(i)], -1)
+    # Rotate ray directions from camera frame to the world frame
+    rays_d = np.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
+    # Translate camera frame's origin to he world frame. It is the origin of all rays.
+    rays_o = np.broadcast_to(c2w[:3, -1], np.shape(rays_d))
 
     return rays_o, rays_d
 
@@ -75,7 +87,7 @@ def ndc_rays(height, width, focal, near, rays_o, rays_d):
     o2 = 1. + 2. * near / rays_o[..., 2]
 
     d0 = -2. * focal / width * (rays_d[..., 0] / rays_d[..., 2] - rays_o[..., 0] / rays_o[..., 2])
-    d1 = -2. * focal / height * (rays_d[..., 1] / rays_d[...,2 ] - rays_o[..., 1] / rays_o[..., 2])
+    d1 = -2. * focal / height * (rays_d[..., 1] / rays_d[..., 2] - rays_o[..., 1] / rays_o[..., 2])
     d2 = -2. * near / rays_o[..., 2]
 
     rays_o = torch.stack([o0, o1, o2], -1)
@@ -95,7 +107,7 @@ def get_vertices(xyz, bounding_box, resolution, log2_hashmap_size):
     keep_mask = (xyz == torch.max(torch.min(xyz, box_max), box_min))
 
     if not torch.all(xyz <= box_max) or not torch.all(xyz >= box_min):
-        xyz = torch.clamp(xyz, min = box_min, max = box_max)
+        xyz = torch.clamp(xyz, min=box_min, max=box_max)
 
     grid_size = (box_max - box_min) / resolution
     bottom_left = torch.floor((xyz - box_min) / grid_size).int()
@@ -104,8 +116,30 @@ def get_vertices(xyz, bounding_box, resolution, log2_hashmap_size):
     max_vertex = min_vertex + torch.tensor([1.0, 1.0, 1.0]) * grid_size
 
     voxel_indices = bottom_left.unsqueeze(1) + \
-        torch.tensor([[[i, j, k] for i in [0, 1] for j in [0, 1] for k in [0, 1]]], device = 'cuda')
+                    torch.tensor([[[i, j, k] for i in [0, 1] for j in [0, 1] for k in [0, 1]]], device='cuda')
     hash_indices = hash(voxel_indices, log2_hashmap_size)
 
     return min_vertex, max_vertex, hash_indices, keep_mask
 
+
+def img2mse(rgb, target):
+    return torch.mean((rgb - target) ** 2)
+
+
+def mse2psnr(mse):
+    return -10. * torch.log(mse) / torch.log(torch.Tensor([10.]))
+
+
+def hash(coords, log2_hashmap_size):
+    primes = [1, 2654435761, 805459861, 3674653429, 2097192037, 1434869437, 2165219737]
+
+    xor_result = torch.zeros_like(coords)[..., 0]
+
+    for i in range(coords.shape[-1]):
+        xor_result ^= coords[..., i] * primes[i]
+
+    return torch.tensor((1 << log2_hashmap_size) - 1).to(xor_result.device) & xor_result
+
+
+def to8bit(x):
+    return (255 * np.clip(x, 0, 1)).astype(np.uint8)
