@@ -29,7 +29,7 @@
 </br>
 &emsp; □ [Paper Study](/InstantNGP/InstantNGP.md)
 </br>
-&emsp; □ [Code Practice](/InstantNGP/InstantNGP.ipynb)
+&emsp; □ [Code Practice](/InstantNGP)
 </br>
 
 
