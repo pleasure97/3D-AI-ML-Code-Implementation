@@ -43,7 +43,7 @@
 
 
 
-■ Face-Vid2Vid : One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing
+■ Face-Vid2Vid : One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing (CVPR 2021)
 </br>
 &emsp; □ [Paper Study](/FaceVid2Vid/FaceVid2Vid.md)
 </br>
