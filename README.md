@@ -42,3 +42,11 @@
 </br>
 
 
+
+■ Face-Vid2Vid : One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing
+</br>
+&emsp; □ [Paper Study](/FaceVid2Vid/FaceVid2Vid.md)
+</br>
+&emsp; □ [Code Practice](/FaceVid2Vid/)
+</br>
+
