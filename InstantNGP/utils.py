@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from kornia import create_meshgrid
 
 
 def get_multires_hash_encoding(args, encoder=HashEncoder):
@@ -143,3 +144,52 @@ def hash(coords, log2_hashmap_size):
 
 def to8bit(x):
     return (255 * np.clip(x, 0, 1)).astype(np.uint8)
+
+
+def get_ray_directions(height, width, focal):
+    grid = create_meshgrid(height, width, normalized_coordinates=False)[0]
+    i, j = grid.unbind(-1)
+    directions = \
+        torch.stack([(i - width / 2) / focal, -(j - height / 2) / focal, -torch.ones_like(i)], -1)
+
+    direction_bounds = directions.view(-1, 3)
+
+    return directions
+
+
+def get_rays_origin_and_direction(directions, c2w):
+    # Rotate ray directions from camera coordinate to the world coordinate
+    rays_d = directions @ c2w[:3, :3].T  # (height, width, 3)
+    rays_d = rays_d / torch.norm(rays_d, dim=-1, keepdim=True)
+    # The origin of all rays is the camera origin in world coordinate
+    rays_o = c2w[:3, -1].expand(rays_d.shape)
+
+    rays_d = rays_d.view(-1, 3)
+    rays_o = rays_o.view(-1, 3)
+
+    return rays_o, rays_d
+
+
+def get_ndc_rays_origin_and_direction(height, width, focal, near, rays_o, rays_d):
+    # Shift ray origins to near plane
+    t = -(near + rays_o[..., 2]) / rays_d[..., 2]
+    rays_o = rays_o + t[..., None] * rays_d
+
+    # Store some intermediate homogeneous results
+    ox_oz = rays_o[..., 0] / rays_o[..., 2]
+    oy_oz = rays_o[..., 1] / rays_o[..., 2]
+
+    # Projection
+    o0 = -1. / (width / (2. * focal)) * ox_oz
+    o1 = -1. / (height / (2. * focal)) * oy_oz
+    o2 = 1. + 2. * near / rays_o[..., 2]
+
+    d0 = -1. / (width / (2. * focal)) * (rays_d[..., 0] / rays_d[..., 2] - ox_oz)
+    d1 = -1. / (height / (2. * focal)) * (rays_d[..., 1] / rays_d[...,2 ] - oy_oz)
+    d2 = 1 - o2
+
+    rays_o = torch.stack([o0, o1, o2], -1)
+    rays_d = torch.stack([d0, d1, d2], -1)
+
+    return rays_o, rays_d
+
