@@ -1,5 +1,6 @@
 import configargparse
 import torch
+import torch.nn.functional as F
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,8 +11,8 @@ import json
 import imageio
 from tqdm import tqdm, trange
 
-from utils import get_multires_hash_encoding, get_rays, ndc_rays, get_rays_np, img2mse, mse2psnr, to8bit
-from encoder import HashEncoder
+from utils import HashEncoder, get_multires_hash_encoding, hierarchical_sampling, \
+                    get_rays, ndc_rays, get_rays_np, img2mse, mse2psnr, to8bit
 from model import InstantNeRF
 from load_data import load_data
 from loss import total_variation_loss, sigma_sparsity_loss
@@ -26,7 +27,7 @@ def batchify_network(network, batch_size):
     return batchify
 
 
-def run_network(images, rays_d, network, encoding=get_multires_hash_encoding(args), batch_size=2 ** 16):
+def run_network(images, rays_d, network, encoding, batch_size=2 ** 16):
     images_flattened = torch.reshape(images, [-1, images.shape[-1]])
     embedded, out_dim = encoding(images_flattened)
 
@@ -65,7 +66,7 @@ def batchify_rays(r_flattened, batch_size=2 ** 16, **kwargs):
     return r_dict
 
 
-def raw2outputs(raw, delta, raw_noise_std=0., white_background=False):
+def raw2outputs(raw, delta, rays_d, raw_noise_std=0., white_background=False):
     '''
     Transforms model's predictions to semantically meaningful values.
     Args:
@@ -102,20 +103,20 @@ def raw2outputs(raw, delta, raw_noise_std=0., white_background=False):
     #
 
     alpha = raw2alpha(raw[..., 3] + noise, dists)
-    w_i = alpha * torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1)), 1. - alpha + 1e-10], -1), -1)[:.:-1]
+    w_i = alpha * torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1)), 1. - alpha + 1e-10], -1), -1)[:,:-1]
     c_r = torch.sum(w_i[..., None] * c_i, -2)
 
     #
 
     depth_map = torch.sum(w_i * delta, -1) / torch.sum(w_i, -1)
     disparity_map = 1. / torch.max(1e-10 * torch.ones_like(depth_map), depth_map)
-    opacity_map = torch.sum(weights, -1)
+    opacity_map = torch.sum(w_i, -1)
 
     #
 
-    entropy = Categorical(probs=torch.cat([w_i, 1. - w_i.sum(-1, keepdims=True) + 1e-6], dim=-1).entropy()
+    entropy = Categorical(probs=torch.cat([w_i, 1. - w_i.sum(-1, keepdims=True) + 1e-6], dim=-1)).entropy()
 
-    return c_r, depth_map, disparity_map, opacity_map, weights, entropy
+    return c_r, depth_map, disparity_map, opacity_map, w_i, entropy
 
 
 def render_rays(r_batched, network, query, num_coarse_samples, embedding=None, include_raw=False, \
@@ -192,10 +193,10 @@ def render_rays(r_batched, network, query, num_coarse_samples, embedding=None, i
         samples = hierarchical_sampling(delta_mid, weights[..., 1: -1], num_fine_samples, use_uniform=(perturb == 0.))
         samples = samples.detach()
 
-        delta, _ = torch.sort(torch.cat([delta, z_samples], -1), -1)
+        delta, _ = torch.sort(torch.cat([delta, samples], -1), -1)
         points = rays_o[..., None, :] + rays_d[..., None, :] * delta[..., :, None]
 
-        network = network_coarse if network_fine is None else network_fine
+        network = network if fine_network is None else fine_network
         raw = query(points, viewdirs, network)
         c_r, disparity_map, opacity_map, weights, depth_map, entropy = raw2outputs(raw, delta, rays_d,
                                                                                        raw_noise_std, white_background)
@@ -418,7 +419,7 @@ def create_NeRF(args):
         'perturb' : args.perturb,
         'num_fine_samples' : args.num_fine_samples,
         'fine_network' : fine_network,
-        'num_coarse_samples' : num_coarse_samples,
+        'num_coarse_samples' : args.num_coarse_samples,
         'network_fn' : model,
         'embedded' : embedded,
         'use_viewdirs' : args.use_viewdirs,
@@ -455,19 +456,19 @@ def config_parser():
     parser.add_argument('--learning_rate', type = float, default = 5e-4, help = 'learning rate')
     parser.add_argument('--learning_rate_decay', type = int, default = 250, help = 'learning rate decay in 1000 steps')
     parser.add_argument('--rays_per_memory', type = int, default = 2 ** 15, help = 'number of rays processed in memory')
-    parser.add_argument('--num_points', type = int, deafult = 2 ** 16, help = 'numer of points sent through network')
+    parser.add_argument('--num_points', type = int, default = 2 ** 16, help = 'numer of points sent through network')
     parser.add_argument('--use_batching', action = 'store_true', help = 'only take random rays from one image at a time')
     parser.add_argument('--no_reload', action = 'store_true', help = 'do not reload weights from saved checkpoints')
     parser.add_argument('--coarse_npy', type = str, default = None, help = 'weights npy file for coarse network')
 
     # Set rendering options
     parser.add_argument('--num_coarse_samples', type = int, default = 64, help = 'number of coarse samples per ray')
-    parser.add_argument('--num_fine_samples', type = int, dafult = 0, help = 'number of fine samples added per ray')
+    parser.add_argument('--num_fine_samples', type = int, default = 0, help = 'number of fine samples added per ray')
     parser.add_argument('--perturb', type = float, default = 1., help = 'set to 1. for jitter else 0.')
     parser.add_argument('--use_viewdirs', action = 'store_true', help = 'use full 5D input instead of 3D')
     parser.add_argument('--max_frequency_3D', type = int, default = 10, help = 'log2 of max frequency for 3D location')
     parser.add_argument('--max_frequency_2D', type = int, default = 4, help = 'log2 of max frequency for 2D direction')
-    parser.add_argument('--raw_noise_std', type = float, deafult = 0., help = 'standard deviation of noise added')
+    parser.add_argument('--raw_noise_std', type = float, default = 0., help = 'standard deviation of noise added')
     parser.add_argument('--render_only', action = 'store_true', help = 'render only render_poses path')
     parser.add_argument('--render_test', action = 'store_true', help = 'render the test set')
     parser.add_argument('--render_factor', type = int, default = 0, help = 'downsampling factor to speed up rendering')
@@ -477,7 +478,7 @@ def config_parser():
     parser.add_argument('--crop_fraction', type = float, default = .5, help = 'fraction taken for central crops')
 
     # Set dataset options
-    parser.add_argument('--half_resolution', action = 'store_ture', help = 'load data at 400X400 instead of 800X800')
+    parser.add_argument('--half_resolution', action = 'store_true', help = 'load data at 400X400 instead of 800X800')
     parser.add_argument('--scene_id', type = str, default = 'scene0000_00', help = 'scene id to load from scannet')
 
     # Set logging and saving options
@@ -496,7 +497,7 @@ def config_parser():
 def train():
 
     parser = config_parser()
-    args = parser.parse_arg()
+    args = parser.parse_args()
 
 
     images, poses, render_poses, hwf, i_mode, bounding_box = \
@@ -746,7 +747,7 @@ def train():
             times.append(t)
             loss_psnr_time = {"losses" : losses, "psnrs" : psnrs, "time" : times}
 
-            with open(os.path.join(base_directory, experiment_name, "loss_vs_time.pkl", "wb") as fp:
+            with open(os.path.join(base_directory, experiment_name, "loss_vs_time.pkl", "wb")) as fp:
                 pickle.dump(loss_psnr_time, fp)
 
         global_step += 1
