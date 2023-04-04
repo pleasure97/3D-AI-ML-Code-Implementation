@@ -100,7 +100,11 @@
 </br>
 </br>
 
-&nbsp; 이 세 가지의 핵심 구성요소는
+&nbsp; 저자들은 모델을 이 세 가지의 핵심 구성요소로 분해해 	3D keypoint들에 대한 unsupervised model을 만들었다. 3D keypoint들은 얼굴의 감정 표현을 모델하는 부류와 개개인의 얼굴의 기하학적 특징을 모델하는 부류로 분해된 후, 다시 합쳐져 생성될 이미지의 mapping function을 학습하는 데 쓰인다.
+</br>
+</br>
+
+&nbsp; 이제부터, Face-Vid2Vid의 각 핵심 구성 요소에 대해 알아보고자 한다.
 
 </br>
 
@@ -108,18 +112,151 @@
 
 </br>
 
-&nbsp; 첫 번째는 원본 이미지의 특징을 추출하는 요소이다
+&nbsp; 위의 사진에서 (a) 부분은 원본 이미지의 특징을 추출하는 부분이다. 
 
 </br>
+
+&nbsp; 논문에서 사용되는 용어를 우선 정리하고,  원본 이미지의 특징이 어떻게 추출되는지 단계별로 설명하고자 한다. 
+
+</br>
+
+- $s$ : 원본 이미지 
+- $d = \{d_1, d_2, ... , d_N\}$ : driving video 
+- $d_i$ : driving video의 각 프레임 
+- $N$ : driving video의 총 프레임 수 
+- $y = \{y_1, y_2, ... , y_N\}$ :  $s$와 $d$의 특징들로 만들고자 하는 video 
+
+</br>
+
+$s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나온 이미지가 아니면 motion transfer task가 된다. 
+
+</br>
+
+- $F$ : 얼굴의 특징을 추출하는 네트워크 
+- $f_s$ : $F$로 추출된 얼굴의 특징. (높이, 너비, 깊이)로 구성된 3D Feature map
+- $L$ : 표준화된 3D keypoint를 탐지하는 네트워크 
+- $x_{c,k} \in \mathbb{R}^3$ : $L$로부터 추출된 $K$개의 3D keypoint들
+- $K = 20$
+- $H$ : 머리의 위치를 측정하는 네트워크 
+- $R_s \in \mathbb{R}^{3 \times 3}$ : 머리의 위치에 대한 rotation matrix 
+- $t_s \in \mathbb{R}^3$: 머리의 위치에 대한 translation vector 
+- $\Delta$ : 중립적 표현으로부터 표현 변형을 측정하는 네트워크
+- $\delta_{s,k}$: $\Delta$로부터 측정되는 $K$개의 3D keypoint들
+- $x_{s,k}$ : 원본 이미지로부터 추출되는 $K$개의 최종적인 3D keypoint들
+
+</br>
+
+&nbsp; 원본 이미지를 추출하는 과정은 다음과 같다. 
+
+</br>
+
+&nbsp; (1) 	$F$로 $f_s$를 추출한다. 
+
+</br>
+
+&nbsp; (2) $L$로부터 $x_{c,k}$를 추출한다. 
+
+</br>
+
+&nbsp; (3) $H$로부터 $R_s$와 $t_s$를 추출한다.
+
+</br>
+
+&nbsp; (4) $\Delta$로 $\delta_{s,k}$를 측정한다. 
+
+</br>
+
+![](./img/Face-Vid2Vid-4.jpg)
+
+</br>
+
+&nbsp; (5) 위의 수식으로 $x_{s,k}$를 산출한다. 
+
+</br>
+</br>
+
+&nbsp; 다음으로 driving video에서 특징을 추출하는 요소를 알아보고자 한다. 
+
+</br>
+
+&nbsp;  위의 사진에서 (b) 부분은 driving video에서 특징을 추출하는 부분이다.
+
+</br>
+
+-  $H$ : 머리의 위치를 측정하는 네트워크 
+- $R_d$ : 머리의 위치에 대한 rotation matrix 
+- $t_d$ : 머리의 위치에 대한 translation vector 
+- $\Delta$ : 감정 표현을 분리해내는 네트워크
+- $\delta_{d,k}$ : $\Delta$로부터 측정되는 K개의 3D keypoint들 
+
+</br>
+
+![](./img/Face-Vid2Vid-7.jpg)
+
+</br>
+
+&nbsp; 원본 이미지에서 $x_{s,k}$를 산출하는 수식과 유사하지만 주목할 점이 있다. 
+
+</br>
+
+&nbsp; Rotation matrix와 행렬곱하는 벡터로 $x_{c,k}$가 다시 쓰인 것이다.  $x_{c,k}$를 다시 쓰는 이유는 원본 이미지로부터 추출된 $x_{s,k}$와 $x_{d,k}$의 정체성을 맞춰주기 위함이다.
+
+</br>
+</br>
+
+&nbsp; 마지막으로,  추출한 특징들을 합쳐 새로운 영상으로 합성해내는 요소이다.
+
+</br>
+
+![](./img/Face-Vid2Vid-6.jpg)
+
+</br>
+
+- $w$ : 새로운 영상에 맞게 변형하는 warping function
+- $w_k$ : $k$번째 keypoint에 대해 선형 근사해 얻어낸 warping flow 
+- $M$ : 시간에 따른 얼굴의 움직임을 측정하는 네트워크 
+- $m$ : $M$에서 warp된 특징들을 얼마나 합성에 참여시킬지 조절하는 mask 
+- $G$ : $y$라는 최종 영상을 만들어 내는 네트워크 
+
+</br>
+
+&nbsp; 새로운 영상을 합성해내는 과정은 다음과 같다. 
+
+</br>
+
+&nbsp; (1) $x_{s,k}$와 $x_{d,k}$에 대해 $w$를 적용해 $K$개의 $w_k$를 만든다.
+
+</br>
+
+&nbsp; (2)  warp된 특징들인 $w_k$를 $M$으로 측정해 $m$을 만든다. 
+
+</br>
+
+&nbsp; (3) 기존의 $w_k$에 $m$을 더해 합성된 flow field인 $w$를 만든다. 
+
+</br>
+
+&nbsp; (4) 원본에서 추출된 특징인 $f_s$에 $w$를 적용한다. 
+
+</br>
+
+&nbsp; (5) $w(f_s)$를 $G$에 입력해 최종 이미지인 $y$를 만들어낸다. 
+
 
 ### Technical details of Face-Vid2Vid
 ---
 
 </br>
 
+&nbsp; 우선 Face-Vid2Vid 모델은 jacobian matrix를 사용하지 않는다. 물론 jacobian matrix는 keypoint들 주변의 local patch들이 어떻게 변환되야 하는지에 도움이 된다. 하지만 저자들은 local patch들에 대한 변환을 rotation matrix인 $R_s$로만 다뤄서 전송 대역폭을 크게 줄이고자 한다. 
 
 </br>
 
+&nbsp; 그리고 Face-Vid2Vid 모델에서 사용하는 driving video에 대한 feature extraction이라는 representation은 상대적으로 compact해 역시 대역폭을 줄이는 데 도움이 된다. 
+
+
+
+</br>
 
 	
 ### 실험
