@@ -108,11 +108,11 @@
 
 </br>
 
-![](./img/Face-Vid2Vid-3.jpg)
+![](./img/Face-Vid2Vid-14.jpg)
 
 </br>
 
-&nbsp; 위의 사진에서 (a) 부분은 원본 이미지의 특징을 추출하는 부분이다. 
+&nbsp; 위의 사진은 원본 이미지의 특징을 추출하는 부분을 나타낸다. 
 
 </br>
 
@@ -151,17 +151,8 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 
 &nbsp; (1) 	$F$로 $f_s$를 추출한다. 
-
-</br>
-
 &nbsp; (2) $L$로부터 $x_{c,k}$를 추출한다. 
-
-</br>
-
 &nbsp; (3) $H$로부터 $R_s$와 $t_s$를 추출한다.
-
-</br>
-
 &nbsp; (4) $\Delta$로 $\delta_{s,k}$를 측정한다. 
 
 </br>
@@ -176,6 +167,10 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 
 &nbsp; 다음으로 driving video에서 특징을 추출하는 요소를 알아보고자 한다. 
+
+</br>
+
+![](./img/Face-Vid2Vid-15.jpg)
 
 </br>
 
@@ -225,21 +220,9 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 
 &nbsp; (1) $x_{s,k}$와 $x_{d,k}$에 대해 $w$를 적용해 $K$개의 $w_k$를 만든다.
-
-</br>
-
 &nbsp; (2)  warp된 특징들인 $w_k$를 $M$으로 측정해 $m$을 만든다. 
-
-</br>
-
 &nbsp; (3) 기존의 $w_k$에 $m$을 더해 합성된 flow field인 $w$를 만든다. 
-
-</br>
-
 &nbsp; (4) 원본에서 추출된 특징인 $f_s$에 $w$를 적용한다. 
-
-</br>
-
 &nbsp; (5) $w(f_s)$를 $G$에 입력해 최종 이미지인 $y$를 만들어낸다. 
 
 
