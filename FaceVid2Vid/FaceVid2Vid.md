@@ -112,7 +112,7 @@
 
 </br>
 
-&nbsp; 위의 사진은 원본 이미지의 특징을 추출하는 부분을 나타낸다. 
+&nbsp; **첫째, 원본 이미지의 특징을 추출하는 요소이다.**  
 
 </br>
 
@@ -169,7 +169,7 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 </br>
 
-&nbsp; 다음으로 driving video에서 특징을 추출하는 요소를 알아보고자 한다. 
+&nbsp; **둘째, driving video에서 특징을 추출하는 요소를 알아보고자 한다.** 
 
 </br>
 
@@ -202,7 +202,7 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 </br>
 
-&nbsp; 마지막으로,  추출한 특징들을 합쳐 새로운 영상으로 합성해내는 요소이다.
+&nbsp; **마지막으로,  추출한 특징들을 합쳐 새로운 영상으로 합성해내는 요소이다.**
 
 </br>
 
@@ -282,7 +282,7 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 
 
-&nbsp; 먼저,  face reconstruction 분야이다. 데이터셋으로 VoxCeleb2와 TalkingHead-1KH를 사용했다.
+&nbsp; **먼저,  face reconstruction 분야이다.** 데이터셋으로 VoxCeleb2와 TalkingHead-1KH를 사용했다.
 
 </br>
 
@@ -299,7 +299,7 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 </br>
 
-&nbsp; 둘째, face redirection 분야이다.  데이터셋으로는 face reconstruction과 동일하게 VoxCeleb2와 TalkingHead-1KH가 사용되었다.
+&nbsp; **둘째, face redirection 분야이다.**  데이터셋으로는 face reconstruction과 동일하게 VoxCeleb2와 TalkingHead-1KH가 사용되었다.
 
 </br>
 
@@ -316,7 +316,7 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 </br>
 
-&nbsp; 셋째, video compression 분야이다. 데이터셋으로는 해상도가 512 $\times$ 512인 고품질의 talking-head video 224개가 쓰였다. 
+&nbsp; **셋째, video compression 분야이다.** 데이터셋으로는 해상도가 512 $\times$ 512인 고품질의 talking-head video 224개가 쓰였다. 
 
 </br>
 
