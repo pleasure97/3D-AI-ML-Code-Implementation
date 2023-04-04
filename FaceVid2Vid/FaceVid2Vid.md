@@ -1,5 +1,5 @@
 
-## One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing  
+## Face-Vid2Vid : One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing  
 
 
 ### 논문의 연구 목적 
@@ -202,7 +202,7 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 </br>
 
-&nbsp; **마지막으로,  추출한 특징들을 합쳐 새로운 영상으로 합성해내는 요소이다.**
+&nbsp; **,  추출한 특징들을 합쳐 새로운 영상으로 합성해내는 요소이다.**
 
 </br>
 
