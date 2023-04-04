@@ -151,8 +151,11 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 
 &nbsp; (1) 	$F$로 $f_s$를 추출한다. 
+</br>
 &nbsp; (2) $L$로부터 $x_{c,k}$를 추출한다. 
+</br>
 &nbsp; (3) $H$로부터 $R_s$와 $t_s$를 추출한다.
+</br>
 &nbsp; (4) $\Delta$로 $\delta_{s,k}$를 측정한다. 
 
 </br>
@@ -220,11 +223,16 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 
 &nbsp; (1) $x_{s,k}$와 $x_{d,k}$에 대해 $w$를 적용해 $K$개의 $w_k$를 만든다.
+</br>
 &nbsp; (2)  warp된 특징들인 $w_k$를 $M$으로 측정해 $m$을 만든다. 
+</br>
 &nbsp; (3) 기존의 $w_k$에 $m$을 더해 합성된 flow field인 $w$를 만든다. 
+</br>
 &nbsp; (4) 원본에서 추출된 특징인 $f_s$에 $w$를 적용한다. 
+</br>
 &nbsp; (5) $w(f_s)$를 $G$에 입력해 최종 이미지인 $y$를 만들어낸다. 
 
+</br>
 
 ### Technical details of Face-Vid2Vid
 ---
@@ -237,6 +245,27 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 
 &nbsp; 그리고 Face-Vid2Vid 모델에서 사용하는 driving video에 대한 feature extraction이라는 representation은 상대적으로 compact해 역시 대역폭을 줄이는 데 도움이 된다. 
 
+</br>
+
+&nbsp; 다음으로 학습에 필요한 loss들에 대해 알아보고자 한다.
+
+</br>
+
+![](./img/Face-Vid2Vid-6.jpg)
+
+</br>
+
+- $\mathcal{L}_P$ : $y$와 $d$ 간의 perceptual loss. 결과물이 더 선명하게 보이는 데 도움을 줌. 
+- $\mathcal{L}_G$ : multi-resolution patch GAN과 관련된 loss. GAN의 discriminator feature의 loss를 줄임. 
+- $\mathcal{L}_E$ : $x_{d,k}$를 일관적이게 만드는 loss. keypoint이 이미지 평면에 직교 투사할 수 있도록 도와줌. 
+- $\mathcal{L}_K$ : 측정된 $x_{d,k}$가 얼굴 전역에 퍼질 수 있도록 도와주는 keypoint coverage loss. 
+- $\mathcal{L}_H$ : head rotation의 ground truth 값인 $\bar{R}_d$과 예측값인 $R_d$를 비교하는 loss. 
+- $\mathcal{L}_\Delta$ : deformation과 관련된 $\delta_{d,k}$에 대한 loss.  deformation이 감정 표현의 변화를 표현하므로 미세한 정도로 변할 필요가 있음. 
+
+
+</br>
+
+&nbsp; Face-Vid2Vid의 저자들은 논문의 Appendix 부분에서 hyperparameter 등 더 구체적인  technical implementation들을 잘 설명하고 있으니, 그 부분을 참고하면 좋을 듯하다.
 
 
 </br>
@@ -247,8 +276,63 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 </br>
 
 
+&nbsp; 다음 세 가지 분야에서 실험을 진행했다.  첫 번째 분야는 face reconstruction으로, same-identity reconstruction과 cross-identity motion transfer로 이루어져 있다. 두 번째 분야는 face redirection이고, 마지막 세 번째 분야는 video compression이다. 
+
+</br>
+</br>
+
+
+&nbsp; 먼저,  face reconstruction 분야이다. 데이터셋으로 VoxCeleb2와 TalkingHead-1KH를 사용했다.
+
+</br>
+
+&nbsp; 그리고 비교 대상이 되는 모델로는 FOMM, fs-vid2vid, 그리고 bi-layer neural avatars이다. 
+
+</br>
+
+&nbsp; 다음으로 평가 지표에 대해 알아보고자 한다. reconstruction에 대한 평가 지표는 $L_1$, $PSNR$, $SSIM/MS-SSIM$이 사용되었다. 결과물의 시각적 품질에 대한 평가 지표는 FID가 사용되었다. 그리고 AKD (Average Keypoint Distance)로 일관성을 평가했다.
+
+</br>
+
+![](./img/Face-Vid2Vid-6.jpg)
+
+</br>
+</br>
+
+&nbsp; 둘째, face redirection 분야이다.  데이터셋으로는 face reconstruction과 동일하게 VoxCeleb2와 TalkingHead-1KH가 사용되었다.
+
+</br>
+
+&nbsp; 비교 대상이 되는 모델로는 pSp(pixel2style2pixel)과 RaR(Rotate-and-Render)가 있다.
+
+</br>
+
+&nbsp; 평가 지표로는 identity preservation과 head pose angles가 사용되었다.
+
+</br>
+
+![](./img/Face-Vid2Vid-16.jpg)
+
+</br>
+</br>
+
+&nbsp; 셋째, video compression 분야이다. 데이터셋으로는 해상도가 512 $\times$ 512인 고품질의 talking-head video 224개가 쓰였다. 
+
+</br>
+
+&nbsp; 비교 대상이 되는 모델로는 비디오 스트리밍에서 유명한 H.264 codec, 그리고 FOMM, fs-vid2vid가 있다.
+
+</br>
+
+&nbsp; 평가 지표로는 비디오의 압축률과 관련된 bpp(bits required per pixel)와 perceptual similarity metric인 LPIPS가 사용되었다. 
+
+</br>
+
+![](./img/Face-Vid2Vid-17.jpg)
 
 </br>
 
 ### 논문의 한계 및 배울 점 
 ---
+</br>
+
