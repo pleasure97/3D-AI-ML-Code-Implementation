@@ -1,6 +1,6 @@
 import configargparse
 
-def train():
+def main():
     parser = configargparse.ArgumentParser()
 
     parser.add_argument('-- ', type= , )
