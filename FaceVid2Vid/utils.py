@@ -1,4 +1,10 @@
 import torch.jit
+import yaml
+
+
+def load_config(experiment_name, train_dir='train'):
+    with open(f'{train_dir}/{experiment_name}.yaml', 'r') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
 
 
 def normalize_vgg_face_tensor(tensor):
@@ -25,4 +31,3 @@ def mean_min_value(x, is_positive=True):
         min_value = torch.min(-x - 1, 0)
         loss = -torch.mean(min_value)
         return loss
-
