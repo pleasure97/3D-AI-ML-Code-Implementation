@@ -16,13 +16,13 @@
 
 </br>
 </br>
- 
- ■ NeRF : Representing Scenes as Neural Radiance for View Synthesis (ECCV 2020)
- </br>
-  &emsp;  □ [Paper Study](/NeRF/NeRF.md)
-  </br>
-  &emsp; □ [Code Practice](/NeRF/NeRF.ipynb)
-  </br>
+
+■ Face-Vid2Vid : One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing (CVPR 2021)
+</br>
+&emsp; □ [Paper Study](/FaceVid2Vid/FaceVid2Vid.md)
+</br>
+&emsp; □ [Code Practice](/FaceVid2Vid/)
+</br>
 
 
 ■ Instant Neural Graphics Primitives with a Multiresolution Hash Encoding (SIGGRAPH 2022) 
@@ -33,20 +33,18 @@
 </br>
 
 
+■ NeRF : Representing Scenes as Neural Radiance for View Synthesis (ECCV 2020)
+</br>
+&emsp;  □ [Paper Study](/NeRF/NeRF.md)
+</br>
+&emsp; □ [Code Practice](/NeRF/NeRF.ipynb)
+</br>
+
 
 ■ PIFuHD : Multi-Level Pixel Aligned Implicit Function for High-Resolution 3D Human Digitization (CVPR 2020)
 </br>
 &emsp; □ [Paper Study](/PIFuHD/PIFuHD.md)
 </br>
-&emsp; □ [Code Practice](/PIFuHD/PIFuHD.ipynb)
-</br>
-
-
-
-■ Face-Vid2Vid : One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing (CVPR 2021)
-</br>
-&emsp; □ [Paper Study](/FaceVid2Vid/FaceVid2Vid.md)
-</br>
-&emsp; □ [Code Practice](/FaceVid2Vid/)
+&emsp; □ [Code Practice]
 </br>
 
