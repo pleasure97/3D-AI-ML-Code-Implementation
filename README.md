@@ -45,6 +45,6 @@
 </br>
 &emsp; □ [Paper Study](/PIFuHD/PIFuHD.md)
 </br>
-&emsp; □ [Code Practice]
+&emsp; □ Code Practice
 </br>
 
