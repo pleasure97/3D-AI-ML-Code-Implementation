@@ -48,3 +48,10 @@
 &emsp; □ [Code Practice](/PIFuHD/)
 </br>
 
+■ Text2Mesh : Text-Driven Neural Stylization for Meshes (CVPR 2022)
+</br>
+&emsp; □ [Paper Study](/Text2Mesh/Text2Mesh.md)
+</br>
+&emsp; □ [Code Practice](/Text2Mesh/)
+</br>
+
