@@ -7,23 +7,24 @@
 ![](./img/1.jpg)
 
 </br>
-</br>
-&nbsp; 논문은 text prompt의 내용을 바탕으로 3D Mesh의 스타일을 semantic manipulation하는 것을 목표로 하고 있다. 
+</br> 
+
+**논문은 text prompt의 내용을 바탕으로 3D Mesh의 스타일을 semantic manipulation하는 것을 목표로 하고 있다.** 
 
 </br>
 
-&nbsp;  위의 논문의 사진에서 논문의 연구 목적을 구체적으로 이해할 수 있다. 
+위의 논문의 사진에서 논문의 연구 목적을 구체적으로 이해할 수 있다. 
 
 </br>
 
-&nbsp; 논문의 모델은 'Astronaut Horse'라는 text prompt를 입력으로 받고, 말 모양의 3D Mesh를 생성하고,  우주복에 맞는 정교한 색상과 기하학적 디테일을 덧입힌다. 
+논문의 모델은 'Astronaut Horse'라는 text prompt를 입력으로 받고, 말 모양의 3D Mesh를 생성하고,  우주복에 맞는 정교한 색상과 기하학적 디테일을 덧입힌다. 
 
 </br>
 
-&nbsp; 말 모양의 3D shape은 만들고자 하는 대상의 전반적인 형체와 구조를 나타내는 content이고, 우주복은 만들고자 하는 대상의 색상 및 기하학적 특징인 style이다.
+말 모양의 3D shape은 만들고자 하는 대상의 전반적인 형체와 구조를 나타내는 content이고, 우주복은 만들고자 하는 대상의 색상 및 기하학적 특징인 style이다.
 
 </br>
-&nbsp; semantic manipulation이 이미지나 비디오에서 객체를 의미에 맞게 수정하는 기술인 점을 알면, 논문이 text prompt를 기반으로 객체를 stylize하는 semantic manipulation 기술을 만들려는 것임을 알 수 있다. 
+semantic manipulation이 이미지나 비디오에서 객체를 의미에 맞게 수정하는 기술인 점을 알면, 논문이 text prompt를 기반으로 객체를 stylize하는 semantic manipulation 기술을 만들려는 것임을 알 수 있다. 
 
 ### 선행 연구의 한계
 ---
@@ -41,25 +42,29 @@
 
 </br>
 
-&nbsp; 셋째, Texture Transfer in 3D이다. Texture Transfer는 mesh parameterization을 활용해 3D Mesh의 style을 제어한다. 하지만 mesh parameterization은 이미 정해진 parameter를 기반으로 3D Mesh를 만들기 때문에 
+&nbsp; 셋째, Texture Transfer in 3D이다. Texture Transfer는 mesh parameterization을 활용해 3D Mesh의 style을 제어한다. 하지만 mesh parameterization은 이미 정해진 parameter라는 엄격한 조건으로 3D Mesh를 만들기 때문에 실제로 존재하는 대부분의 mesh를 표현할 수 없다.  Text2Mesh는 Mesh의 모든 vertex에 대해 style value를 제공하는 neural field를 사용한다.
+
+</br>
+
+&nbsp; 넷째, Neural Priors and Neural Fields이다. 대표적으로 NeRF가 있다. NeRF는 3D Scene Modeling에서 성능이 좋지만, geometry와 appearance를 묶어서 처리하기 때문에 content와 style을 분리해서 제어할 수 없다. 또한 NeRF와 같은 Neural Fields는 정확하게 묘사하기 위해 렌더링 속도가 느리고 생성된 영상을 편집하기도 어렵다. Text2Mesh는 content에 대해선 explicit representation을 사용하고, appearance는 neural style field를 사용하는 disentangled representation이다.
 
 ### Text2Mesh
 ---
 </br>
 
-![](./img/PIFuHD-4.jpg)
+![](./img/2.jpg)
 
 </br>
 
-&nbsp; 위에 나온 PIFuHD의 구조를 통해 선행 연구들의 한계점들을 어떻게 극복했는지 알아보고자 한다.
+&nbsp; 위에 나온 Text2Mesh의 구조를 통해 선행 연구들의 한계점들을 어떻게 극복했는지 알아보고자 한다.
 
 </br>
 
-&nbsp; 첫째, PIFuHD는 Pixel-Aligned Implicit Function을 사용한다. Pixel-Aligned Implicit Function, 줄여서 PIFu는,  전체 공간에서 특정 부분의 공간을 나눠서 메모리에 저장해야 되는 explicit representation과 다르다. PIFu는 어떤 위치의 3D 좌표에 대해서도 이 좌표가 인간 이미지에 포함되어 있는지 아닌지 구분할 수 있는 implicit function이다. PIFuHD는 PIFu를 활용해 메모리 효율성을 높이고, PIFu에 저장된 이미지 feature들로 local detail들을 살렸다.
+&nbsp; Text2Mesh는 input mesh가 target text에 맞는 mesh가 될 수 있도록 색상과 기하학적 디테일을 예측한다. 예측에 관여한 neural style network는 다량의 2D 이미지들을 렌더링하고, 그 이미지들을 증강함으로써 최적화한다. 최적화에 필요한 손실 함수는 CLIP에서 사용된 cosine similarity를 기반으로 한다. 
 
 </br>
 
-&nbsp; 둘째, PIFuHD는 coarse-to-fine network이다. PIFuHD의 coarse network는 전반적인 3D 구조를 포착하고, fine network는 고해상도의 디테일을 잡아낸다. PIFuHD는 coarse-to-fine network로 질감과 깊이에 대한 3D representation을 예측해, 기존의 GAN 방식의 접근의 한계를 극복해냈다.
+&nbsp; 저자들은 Text2Mesh의 핵심 구성요소로 첫째, Neural Style Field Network, 둘째, Text-based Correspondence, 셋째, Viewpoints & Augmentations를 설명하고 있다. 
 
 </br>
 
@@ -67,83 +72,88 @@
 ---
 </br>
 
-&nbsp; PIFuHD의 핵심 구성 요소로, 첫째, PIFu가 있다. 3D Human Digitization은 3D 공간에서의 한 점이 사람의 신체인지 아닌지를 구분하는, occupancy의 측정 문제가 관건이다. PIFu는 연속적인 카메라 공간 $X = (X_x, X_y, X_z) \in R^3$에서 주어진 어떤 위치에 대해 binary occupancy value를 예측하는 $f(X)$ 함수이다. 
+&nbsp; Text2Mesh의 첫 번째 핵심 구성 요소는 Neural Style Field Network이다.  Neural Style Field Network에 대해 설명하기에 앞서 관련된 용어에 대해 정리하고자 한다. 
 
 </br>
 
-![](./img/PIFuHD-2.jpg)
+- $M$ : Input Mesh 
+- $V$ :  $M$의 Vertices ($V \in \mathbb{R^{n\times3}}$)
+- $F$ : $M$의  Faces ($F \in \{1, 2, ..., n\}^{m \times 3}$)
+- $t$ : text prompt 
+- $p$ : $V$에 속하는 하나의 정점 ($p \in V$)
+- $M^s$ : Stylized Mesh 
+- $N_s$ : style과 관련된 MLP
+- $N_c$ : color와 관련된 MLP
+- $N_d$ : displacement와 관련된 MLP
+- $c_p$ : $N_s$의 output인 color feature. ($c_p \in [0, 1]^3$) 
+- $d_p$ : $N_d$의 output인 displacement feature. ($d_p \in (-0.1, 0.1)$)
 
 </br>
 
-&nbsp; $I$는 하나의 RGB 이미지이다. 
+&nbsp; Neural Style Field Network는 $N_S$, $N_c$, $N_d$를 활용해 $p$를 $c_p$와 $d_p$로 매핑한다. 
 
 </br>
 
-![](./img/PIFuHD-3.jpg)
+&nbsp; Neural Style Field Network는 저차원의 coordinates를 사용하기 때문에 Fourier Feature Mappings과 같은 positional encoding을 사용한다. 이로써 Neural Style Field Network는 spectral bias를 극복하고 high-frequency functions으로 interpolate할 수 있다. 
 
 </br>
 
-&nbsp; PIFuHD에서 구체화된 PIFu는 위와 같고, 다음은 수식과 관련된 용어에 대한 설명이다.
+![](./img/3.jpg)
 
 </br>
 
- - $x = \pi(X) = (X_x, X_y)$ : orthogonal projected 2D location
+- $\gamma(p)$ : positional encoding of $p$
+- $B \sim \mathbb{N}(0, \sigma^2)$ :  random gaussian matrix ($B \in \mathbb{R}^{n\times3}$)
 
- - $\Phi$  : CNN으로 이루어진 2D feature embedding 함수
+</br>
 
-- $\Phi(x,I)$ : $I$라는 이미지에서 $x$를 활용해 추출된 image feature embdding
-
- - $Z = X_z$ : ray의 depth. 
-
- - $g$ : Multilayer Perceptron 함수. 달라지는 ray의 depth $Z$에 주의해 3D 점들의 occupancy를 분별해야 함. 
+&nbsp; Neural Style Field Network에서 발생하는 구체적인 과정은 다음과 같다. 먼저, $p$가 unit bounding box에 속하게끔 normalize한다. 다음으로, positional encoding이 적용된 $p$인 $\gamma(p)$를 $N_s$에 통과시킨 후, $N_d$와 $N_c$로 네트워크를 분화한다. $N_d$와 $N_c$에서 각각 나온 $c_p$와 $d_p$를 활용해, 색상은 $c_p$, 기하학적 디테일은 $p$에서 $d_p \cdot \vec{n}_p$로 이동시켜 $M^s$를 만든다. 
 
 </br>
 </br>
 
-&nbsp; 둘째, PIFuHD는 Multi-level PIFu를 사용해 기존의 PIFu의 단점을 보완했다. 하나의 PIFu로는 512 X 512에서 128 X 128 정도의 이미지 해상도로 제한된다. 저자들은 1024 X 1024 정도의 해상도로 3D Human Digitization하기 위해선 network의 구조가 top-down 구조이되, 각 level이 연결될 수 있는 intermediate supervision이 필요하다고 주장한다.  Multi-level PIFu의 모듈들을 구체적으로 살펴보고자 한다. 
+&nbsp; Text2Mesh의 두 번째 핵심 구성요소는 Text-based Correspondence이다. Text-based Correspondence를 이루기 위해 미리 학습된 CLIP에서 제공하는 multi-modal embedding space를 활용한다. 이를 알아보기에 앞서 관련된 용어에 대해 정리하고자 한다. 
 
 </br>
 
-![](./img/PIFuHD-5.jpg)
+ - $M^S_{displ}$ : displaced mesh (예측된 color가 없는 $M^s$ )
+ - $\theta$ :  미리 정의된 anchor view 
+ - $n_\theta$ : sampling한 $\theta$의 개수
+ - $I_\theta^{full}$ : $M^S$의 표면에 대한 2D projection
+ - $I_\theta^{displ}$ : $M^S_{displ}$의 표면에 대한 2D projection 
+ - $\psi_{global}$ : full view에 대한 2D Augmentation ($\psi_{global} \in \Psi_{global}$)
+ - $\psi_{local}$ : uncolored view에 대한 2D Augmentation ($\psi_{local} \in \Psi_{global}$)
 
 </br>
 
-- $I_L$ : 해상도를 낮춘 입력 이미지 
-
- - $F_L$ : 앞면에 대한 예측된 normal map  / $B_L$ : 뒷면에 대한 예측된 normal map
- - $x_L$ :  이미지 공간 $I_L$에서 투사된 2d location
+![](./img/5.jpg)
 
 </br>
 
-![](./img/PIFuHD-6.jpg)
+&nbsp; 주어진 $M^S$와 $M^S_{displ}$에 대해 $n_{\theta}$만큼 view를 sample해 differential renderer에서 렌더링한다. 다음으로, 렌더링된 $I_\theta^{full}$과 $I_\theta^{displ}$에 $\psi_{global}$과 $\psi_{local}$을 적용해 CLIP 공간에 임베딩한다. 그 후, 모든 view의 embedding을 average해 augmented representation을 생성한다. 
 
 </br>
 
-- $\Omega(X)$ : coarse level network에서 추출된 3D 임베딩. 
+![](./img/6.jpg)
 
 </br>
 
-&nbsp; 위에서의 수식들을 바탕으로 Multi-level PIFu에서 coarse level network와 fine level network의 차이를 알아보고자 한다. coarse level network는 512 X 512 해상도의 입력 이미지를 128 X 128 해상도의 feature들로 생성해내 전반적인 기하학적 정보 수집에 목표를 두고 있는 반면, fine level network는 1024 X 1024 해상도의 입력 이미지를 512 X 512 해상도의 feature들로 생성해 더 미묘한 디테일들을 잡아내는 데 집중한다. 그리고 fine network는 coarse level network에서 생성된 $\Omega(X)$를 입력으로 받기 때문에 구체적인 정보 포착에만 전념할 수 있다.
+- $\hat{S} \in \{ \hat{S}^{full}, \hat{S}^{displ}, \hat{S}^{local}\}$ 
+- $sim(a, b) = (a \cdot b) / (|a| \cdot |b|)$ : $a$와 $b$의 코사인 유사도
+- $\phi_{target} = E(t) \in \mathbb{R}^{512}$ : CLIP을 통해 임베딩된 target $t$
 
 </br>
 
-![](./img/PIFuHD-7.jpg)
+&nbsp; 위와 같이 loss $L_{sim}$을 만들어주었다. 참고로, $\hat{S}^{full}$과 $\hat{S}^{local}$은 $N_s$, $N_c$, $N_d$를 update하지만, $\hat{S}^{displ}$은 $N_s$와 $N_d$를 update한다. 
+
+</br>
+</br>
+
+&nbsp; Text2Mesh의 세 번째 핵심 구성 요소는 Viewpoints & Augmentations이다. Viewpoints는 다음과 같은 과정으로 이루어진다. 먼저, 주어진 3D Mesh와 target text로 anchor view를 찾는다. 다음으로, 3D Mesh를 렌더링해 각 view에서의 projection과 target text 간의 코사인 유사도를 구한다.  anchor view가 중심인 정규 분포에서 추출해낸 view들로 대상을 렌더링한다.  
 
 </br>
 
- - $S$ : loss를 평가하기 위해 필요한 sample들의 집합
-
- - $\lambda$ : $S$에서 신체 밖에 있는 점들의 비율 
-
- - $f^{*}$ : 해당 위치의 실제 occupancy
-
- - $f^{{L ,H}}$ PIFu (Pixel-Aligned Implicit Function) 
-
-&nbsp; 셋째, PIFuHD는 extended Binary Cross Entropy (BCE) loss를 사용한다. extended BCE loss뿐만 아니라 uniform volume samples와  importance sampling scheme을 합쳐 디테일을 살리 정확도를 높일 수 있다.
-
-</br>
-
-&nbsp; 추가적으로, 저자들은 network가 더 정교하게 재구성된 3D human digitization을 생성하기 위해선 feature extraction 과정에서 frontal normal map과 backside normal map을 image space의 proxy로 사용해야 한다고 주장한다.
+&nbsp; Augmentations는 $\psi_{global}$과 $\psi_{local}$를 사용해 생성된다. $\psi_{global}$은 임의의 perspective transformation을 수반하고, $\psi_{local}$은 임의의 persepctive transformation과 원본 이미지의 10%를 임의로 crop한 것을 생성해낸다. cropping은 localized regions에서 MLP가 표면의 색상과 기하학적 특징을 더 정교하게 다루도록 도와준다. 
 
 </br>
 
@@ -199,6 +209,5 @@
 
 ### 논문의 한계 및 배울 점 
 ---
-e new files by opening the **file explorer** on the left corner of the navigation bar.
 
 
