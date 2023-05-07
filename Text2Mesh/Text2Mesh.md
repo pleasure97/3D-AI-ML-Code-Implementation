@@ -13,15 +13,7 @@
 
 </br>
 
-위의 논문의 사진에서 논문의 연구 목적을 구체적으로 이해할 수 있다. 
-
-</br>
-
-논문의 모델은 'Astronaut Horse'라는 text prompt를 입력으로 받고, 말 모양의 3D Mesh를 생성하고,  우주복에 맞는 정교한 색상과 기하학적 디테일을 덧입힌다. 
-
-</br>
-
-말 모양의 3D shape은 만들고자 하는 대상의 전반적인 형체와 구조를 나타내는 content이고, 우주복은 만들고자 하는 대상의 색상 및 기하학적 특징인 style이다.
+위의 사진에서 논문의 모델은 'Astronaut Horse'라는 text prompt를 입력으로 받고, 말 모양의 3D Mesh를 생성하고,  우주복에 맞는 정교한 색상과 기하학적 디테일을 덧입힌다. 말 모양의 3D shape은 만들고자 하는 대상의 전반적인 형체와 구조를 나타내는 content이고, 우주복은 만들고자 하는 대상의 색상 및 기하학적 특징인 style이다.
 
 </br>
 semantic manipulation이 이미지나 비디오에서 객체를 의미에 맞게 수정하는 기술인 점을 알면, 논문이 text prompt를 기반으로 객체를 stylize하는 semantic manipulation 기술을 만들려는 것임을 알 수 있다. 
@@ -56,26 +48,6 @@ semantic manipulation이 이미지나 비디오에서 객체를 의미에 맞게
 
 </br>
 
-&nbsp; 위에 나온 Text2Mesh의 구조를 통해 선행 연구들의 한계점들을 어떻게 극복했는지 알아보고자 한다.
-
-</br>
-
-&nbsp; Text2Mesh는 input mesh가 target text에 맞는 mesh가 될 수 있도록 색상과 기하학적 디테일을 예측한다. 예측에 관여한 neural style network는 다량의 2D 이미지들을 렌더링하고, 그 이미지들을 증강함으로써 최적화한다. 최적화에 필요한 손실 함수는 CLIP에서 사용된 cosine similarity를 기반으로 한다. 
-
-</br>
-
-&nbsp; 저자들은 Text2Mesh의 핵심 구성요소로 첫째, Neural Style Field Network, 둘째, Text-based Correspondence, 셋째, Viewpoints & Augmentations를 설명하고 있다. 
-
-</br>
-
-### Core Components of Text2Mesh
----
-</br>
-
-&nbsp; Text2Mesh의 첫 번째 핵심 구성 요소는 Neural Style Field Network이다.  Neural Style Field Network에 대해 설명하기에 앞서 관련된 용어에 대해 정리하고자 한다. 
-
-</br>
-
 - $M$ : Input Mesh 
 - $V$ :  $M$의 Vertices ($V \in \mathbb{R^{n\times3}}$)
 - $F$ : $M$의  Faces ($F \in \{1, 2, ..., n\}^{m \times 3}$)
@@ -87,6 +59,22 @@ semantic manipulation이 이미지나 비디오에서 객체를 의미에 맞게
 - $N_d$ : displacement와 관련된 MLP
 - $c_p$ : $N_s$의 output인 color feature. ($c_p \in [0, 1]^3$) 
 - $d_p$ : $N_d$의 output인 displacement feature. ($d_p \in (-0.1, 0.1)$)
+
+</br>
+
+&nbsp; Text2Mesh는 input mesh가 target text에 맞는 mesh가 될 수 있도록 색상과 기하학적 디테일을 예측한다. 예측에 관여한 neural style network는 다량의 2D 이미지들을 렌더링하고, 그 이미지들을 증강함으로써 최적화한다. 최적화에 필요한 손실 함수는 CLIP에서 사용된 cosine similarity를 기반으로 한다. 
+
+</br>
+
+&nbsp; 저자들은 Text2Mesh의 핵심 구성요소로 첫째, Neural Style Field Network, 둘째, Text-based Correspondence, 셋째, Viewpoints & Augmentations를 제시한다. 
+
+</br>
+
+### Core Components of Text2Mesh
+---
+</br>
+
+&nbsp; Text2Mesh의 첫 번째 핵심 구성 요소는 Neural Style Field Network이다. 
 
 </br>
 
@@ -167,22 +155,20 @@ semantic manipulation이 이미지나 비디오에서 객체를 의미에 맞게
 
 </br>
 
-- coarse-fine network 구조가 stacked hourglass network 형태임.
-- coarse level의 feature dimension은 128 X 128 X 256 
-- fine level의 feature dimension은 512 X 512 X 16
-- coarse level의 MLP의 neuron의 수는 (257, 1024, 512, 256, 128, 1) 
-- coarse level의 MLP의 skip connection은 3, 4, 5번째 layer 
-- fine level의 MLP의 neuron의 수는 (257, 512, 256, 128, 1)
-- fine level의 MLP의 skip connection은 2, 3번째 layer 
-- coarse level의 MLP의 input image size (512 X 512) / batch size - 8
-- fine level의 MLP의 input image size (window crop / 512 X 512) / batch size - 8 
+- $\gamma(p)$ : 256-dimensional Fourier feature 
+- 행렬 $B$가 따르는 분포의 표준편차 $\sigma$ : 5.0
+- $N_s$ :  256-dimensional 4 layers with ReLU
+- $N_d$ : 256-dimensional 2 layers with ReLU
+- $N_c$ : 256-dimensional 2 layers with ReLU
+-  final linear layer : weights initialized to 0 with tanh
+- $c_p$ : divide output of $N_c$ by 2, and add [0.5, 0.5, 0.5]
+- $d_p$ : multiply final layer with 0.1 
 
 </br>
 
-[Loss and Optimizer]
-- coarse-fine network에 대한 optimizer : RMSProp (weight decay : 0.1 every 10 epochs)
-- normal map의 network 에 대한 loss : $L_{VGG}$ (perceptual loss) $+$ $\lambda_{l1} L_{l1}$ (l1 distance)
-- normal map의 network에 대한 optimizer : Adam (learning rate : 2e-4)
+[Optimizer and Normalization]
+- Adam optimizer  : (initial learning rate : 5e-4 / learning rate decay : 0.9 every 100 iters)
+- Normalization : (mean $\mu$ : (0:48145466; 0:4578275; 0:40821073) / standard deviation $\sigma$ : (0:26862954; 0:26130258; 0:27577711) per-channel) 
 </br>
 
 
@@ -191,23 +177,52 @@ semantic manipulation이 이미지나 비디오에서 객체를 의미에 맞게
 ---
 </br>
 
-![](./img/PIFuHD-8.jpg)
-
-</br>
-&nbsp; 실험에  RenderPeople 데이터셋과 BUFF 데이터셋이 사용되었다. 
+&nbsp; 실험에 COSEG, Thingi10K, Shapenet, Turbo Squid와 ModelNet 데이터셋이 사용되었다. 데이터셋의 데이터의 퀄리티를 제한하거나 데이터를 전처리하지 않고 그대로 넣었다고 한다. 
 
 </br>
 
-![](./img/PIFuHD-9.jpg)
+&nbsp; 저자들은 실험 결과를 통해 모델의 4가지 특징을 설명한다. 
 
 </br>
 
-&nbsp; 실험 결과, Tex2Shape, PIFu, DeepHuman과 같은 기존의 연구와 달리, 사람의 얼굴의 윤곽과 옷의 주름 등의 질감을 더 자세히 표현해낸 것을 확인할 수 있다.
-
+![](./img/13.jpg)
 
 </br>
+
+&nbsp; 첫째, Text2Mesh로 content와 style에 대한 다양한 표현과 통제가 가능하다. Text2Mesh는 물체뿐만 아니라 사람에 대해서도 기본적인 구조는 유지하되,  semantic role에 맞게 각 대상을 stylize할 수 있다. 그리고 Text2Mesh는 positional encoding에서 사용되는 행렬 $B$와 관련된 표준편차 $\sigma$에 따라 생성하는 mesh의 style이 달라진다. 그 밖에도 Text2Mesh는 	서로 다른 stylized mesh의 style value를 linearly interpolate해 변형된 stylized mesh를 생성할 수 있다.
+
+</br>
+
+![](./img/7.jpg)
+
+</br>
+
+&nbsp; 둘째, Text2Mesh의 구성 요소들에 대한 ablation을 통해 구성 요소들이 필수적임을 보였다. 
+
+</br>
+
+![](./img/4.jpg)
+
+</br>
+
+&nbsp; style field network를 제거할 시, 표면에 noisy하며 arbitrary한 displacement가 생긴 것을 알 수 있다. positinal encoding인 Fourier feature encoding을 제거할 시, 정교한 디테일이 떨어짐을 알 수 있다. crop을 제거할 시, 목표와는 동떨어진 style을 합성해냄을 알 수 있다. $\hat{S}^{displ}$을 제거할 시, 기하적인 개선이 더 이상 불가능하다. geometric prior를 제거할 시, global structure를 담당할 source mesh가 사라져 2D image로 그려지게 된다. 
+
+</br>
+
+&nbsp;  셋째, Text2Mesh와 VQGAN 간 비교 설문조사를 통해 Text2Mesh가 VQGAN보다 Content나 Style면에서 우위에 있다는 응답이 많았다.
+
+</br>
+
+![](./img/14.jpg)
+
+</br>
+
+&nbsp; 넷째, Text2Mesh는 textual stylization을 넘어 서로 다른 target modality를 활용해 mesh를 stylize할 수 있다. 
 
 ### 논문의 한계 및 배울 점 
 ---
 
+</br>
+
+&nbsp; 저자들은 직접 논문의 한계점을 제시했다. 3D Mesh를 stylize할 때 content와 연관이 없는 prompt를 입력할 때, geometric prior를 무시해 source shape content가 지워지는 경우가 발생할 수 있다. 예를 들어, '스테인드 글라스'를 prompt로 받고, '용'이라는 3D mesh에 stylize하게 되면, 용의 형체가 깨진다는 것을 의미한다. 
 
