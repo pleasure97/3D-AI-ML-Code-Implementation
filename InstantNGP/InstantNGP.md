@@ -192,9 +192,9 @@
 
 |  |ACORN  | InstantNGP |
 |--|--|--|
-|DATASET |TOKYO panorma|TOKYO panorma  |
+|DATASET |TOKYO panorama|TOKYO panorama  |
 |PSNR |38.59 dB |41.9 dB |
-|TRAINING TIME| 36.9 h |4 min  |
+|TRAINING TIME| 36.9 hour |4 min  |
 </br>
 </br>
 &nbsp; 다음으로, Signed Distance Functions에 대한 실험의 결과값이다.
