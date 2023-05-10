@@ -106,7 +106,7 @@
 </br>
 &nbsp; - $N_{max}$ : Multiresolution Hash table의 resolution 중 가장 큰 resolution의 크기
 </br>
-&nbsp; - $\xi \in R^{E}$ : neural network 이전에 concatenate될 때 추가되는 입력 데이터 (e.g., neural radiance changing에서 view direction과 textures)
+&nbsp; - $\xi \in R^{E}$ : neural network 이전에 concatenate될 때 추가되는 입력 데이터 (e.g., neural radiance caching에서 view direction과 textures)
 
 </br>
 
