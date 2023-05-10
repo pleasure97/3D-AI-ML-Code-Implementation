@@ -294,7 +294,7 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 
 </br>
 
-![](./img/Face-Vid2Vid-6.jpg)
+![](./img/Face-Vid2Vid-9.jpg)
 
 </br>
 </br>
