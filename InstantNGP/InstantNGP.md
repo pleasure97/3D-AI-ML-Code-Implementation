@@ -167,7 +167,7 @@
 &nbsp; **다음으로, InstantNGP의 hyperaparameter에 대한 구체적인 설정을 알아보고자 한다.**
 </br>
 </br>
-&nbsp; 첫째, inference와 backpropagation performance를 최적화하기 위한 hyperparameter에 대한 설정이다. 먼저, Hash table entry를 half precision으로 저장하되 parametes에 대한 복사본은 full precision으로 저장해 mixed-precision parameter update를 하였다. 다음으로, coarse resolution hash table부터 시작해 resolution 순으로 연속적으로 GPU cache에 저장해 GPU cache를 효율적으로 사용했다. 그리고 feature vector의 차원 수인 $F$는 작을수록 cache locality를 살려 성능을 향상할 수 있고, 클 수록 memory coherence를 살려 성능을 향상할 수 있기 때문에 $F$가 2일 때 최적이라고 한다.
+&nbsp; 첫째, inference와 backpropagation performance를 최적화하기 위한 hyperparameter에 대한 설정이다. 먼저, Hash table entry를 half precision으로 저장하되 parameters에 대한 복사본은 full precision으로 저장해 mixed-precision parameter update를 하였다. 다음으로, coarse resolution hash table부터 시작해 resolution 순으로 연속적으로 GPU cache에 저장해 GPU cache를 효율적으로 사용했다. 그리고 feature vector의 차원 수인 $F$는 작을수록 cache locality를 살려 성능을 향상할 수 있고, 클 수록 memory coherence를 살려 성능을 향상할 수 있기 때문에 $F$가 2일 때 최적이라고 한다.
 </br>
 </br>
 &nbsp; 둘째, Fully connected neural network의 hyperparameter에 대한 설정이다. NeRF를 다루는 neural network를 제외하고, 일반적으로 2개의 hidden layer은 각각 64개의 neuron으로 이루어져 있고, 활성화 함수는 ReLU이다. Fully connected neural network는 zero-initialization이나 uniform distribution $u(-10^{-4}, 10^{-4})$으로 네트워크를 초기화한다. 그리고 네트워크 가중치에 weak L2 regularization을 두어 오랜 학습 기간 후 발산하는 것을 방지한다. 
