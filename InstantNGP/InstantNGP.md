@@ -58,7 +58,7 @@
 &nbsp; 둘째, resolution의 크기에 따라 spatial hash table를 두고, spatial hash table들의 outputs를 concatenate하여 MLP(Multi Layer Perceptron)에 통과시킨다.
 </br>
 </br>
-&nbsp; 셋째, hash function의 hash collision을 일부러 해결하지 않는다. hash function에 의해 만들어지는 hash table에서는 되도록이면 서로 다른  key가 동일한 hash를 가리키지 않아야 한다. 하지만 hash function아 hash의 수가 제한되어 있지만 무한히 key가 생성될 수 있는 함수이기 때문에, 비둘기집의 원리에 의해 필연적으로 서로 다른 key가 같은 hash를 가리키는 문제가 발생한다. 위와 같은 hash function의 문제를 hash collision이라고 한다. 그래서 일반적으로 hash function을 사용할 때는 어떻게든 hash collision을 최소화하려고 한다. 하지만 논문의 저자들은 일부러 hash collision을 해결하지 않는다. hash collision을 해결하지 않아도 spatial hash table들의 output vector들이 MLP에 통과되면, MLP가 backpropgation 과정에서 update에 중요한 hash entry를 구분해내기 때문이다.
+&nbsp; 셋째, hash function의 hash collision을 일부러 해결하지 않는다. hash function에 의해 만들어지는 hash table에서는 되도록이면 서로 다른  key가 동일한 hash를 가리키지 않아야 한다. 하지만 hash function이 hash의 수가 제한되어 있지만 무한히 key가 생성될 수 있는 함수이기 때문에, 비둘기집의 원리에 의해 필연적으로 서로 다른 key가 같은 hash를 가리키는 문제가 발생한다. 위와 같은 hash function의 문제를 hash collision이라고 한다. 그래서 일반적으로 hash function을 사용할 때는 어떻게든 hash collision을 최소화하려고 한다. 하지만 논문의 저자들은 일부러 hash collision을 해결하지 않는다. hash collision을 해결하지 않아도 spatial hash table들의 output vector들이 MLP에 통과되면, MLP가 backpropgation 과정에서 update에 중요한 hash entry를 구분해내기 때문이다.
 </br>
 </br>
 &nbsp; **Multiresolution Hash Encoding의 특징에 따라 다음과 같은 장점을 지닌다.**
