@@ -251,7 +251,7 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 
 </br>
 
-![](./img/Face-Vid2Vid-6.jpg)
+![](./img/Face-Vid2Vid-8.jpg)
 
 </br>
 
@@ -260,7 +260,7 @@ $s$가 $d_1$이면 video reconstruction 작업이 되고, $s$가 $d$에서 나�
 - $\mathcal{L}_E$ : $x_{d,k}$를 일관적이게 만드는 loss. keypoint이 이미지 평면에 직교 투사할 수 있도록 도와줌. 
 - $\mathcal{L}_K$ : 측정된 $x_{d,k}$가 얼굴 전역에 퍼질 수 있도록 도와주는 keypoint coverage loss. 
 - $\mathcal{L}_H$ : head rotation의 ground truth 값인 $\bar{R}_d$과 예측값인 $R_d$를 비교하는 loss. 
-- $\mathcal{L}_\Delta$ : deformation과 관련된 $\delta_{d,k}$에 대한 loss.  deformation이 감정 표현의 변화를 표현하므로 미세한 정도로 변할 필요가 있음. 
+- $\mathcal{L}_{\Delta}$ : deformation과 관련된 $\delta_{d,k}$에 대한 loss.  deformation이 감정 표현의 변화를 표현하므로 미세한 정도로 변할 필요가 있음. 
 
 
 </br>
