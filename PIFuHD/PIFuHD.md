@@ -133,7 +133,7 @@
 
  - $f^{{L ,H}}$ PIFu (Pixel-Aligned Implicit Function) 
 
-&nbsp; 셋째, PIFuHD는 extended Binary Cross Entropy (BCE) loss를 사용한다. extended BCE loss뿐만 아니라 uniform volume samples와  importance sampling scheme을 합쳐 디테일을 살리 정확도를 높일 수 있다.
+&nbsp; 셋째, PIFuHD는 extended Binary Cross Entropy (BCE) loss를 사용한다. extended BCE loss뿐만 아니라 uniform volume samples와  importance sampling scheme을 합쳐 디테일을 살려 정확도를 높일 수 있다.
 
 </br>
 
