@@ -1,10 +1,10 @@
 
 
-##  Computer Vision Study & Practice
+##  3D Machine Learning Study & Practice
 
 </br>
   
-  :star: Computer Vision 관련 논문의 핵심 내용을 정리하고, 논문의 모델을 구현합니다.  
+  :star: 3D Machine Learning 관련 논문의 핵심 내용을 정리하고, 논문의 모델을 구현합니다.  
   
   </br>
   
