@@ -19,19 +19,19 @@
 
 ■ DynIBaR : Neural Dynamic Image-Based Rendering (CVPR 2023)
 </br>
-&emsp; □ [Paper Review](/DynIBaR/dynibar.pdf)
+&emsp; □ [Paper Review](/DynIBaR/dynibar.pdf) (ENG)
 </br>
 
 
 ■ Mip-NeRF : A Multiscale Representation for Anti-Aliasing Neural Networks (CVPR 2021)
 </br>
-&emsp; □ [Paper Review](/Mip-NeRF/Mip-NeRF.pdf)
+&emsp; □ [Paper Review](/Mip-NeRF/Mip-NeRF.pdf) (ENG)
 </br>
 
 
 ■ PointMLP : Rethinking Network Design and Local Geometry in Point Cloud - A Simple Residual MLP Framework (ICLR 2022)
 </br>
-&emsp; □ [Paper Review](/PointMLP/PointMLP.pdf)
+&emsp; □ [Paper Review](/PointMLP/PointMLP.pdf) (ENG)
 </br>
 
 ■ Face-Vid2Vid : One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing (CVPR 2021)
