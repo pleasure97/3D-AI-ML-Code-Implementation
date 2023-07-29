@@ -17,9 +17,26 @@
 </br>
 </br>
 
+■ DynIBaR : Neural Dynamic Image-Based Rendering (CVPR 2023)
+</br>
+&emsp; □ [Paper Review](/DynIBaR/DynIBaR.pdf)
+</br>
+
+
+■ Mip-NeRF : A Multiscale Representation for Anti-Aliasing Neural Networks (CVPR 2021)
+</br>
+&emsp; □ [Paper Review](/Mip-NeRF/Mip-Nerf.pdf)
+</br>
+
+
+■ PointMLP : Rethinking Network Design and Local Geometry in Point Cloud - A Simple Residual MLP Framework (ICLR 2022)
+</br>
+&emsp; □ [Paper Review](/PointMLP/PointMLP.pdf)
+</br>
+
 ■ Face-Vid2Vid : One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing (CVPR 2021)
 </br>
-&emsp; □ [Paper Study](/FaceVid2Vid/FaceVid2Vid.md)
+&emsp; □ [Paper Review](/FaceVid2Vid/FaceVid2Vid.md)
 </br>
 &emsp; □ [Code Practice](/FaceVid2Vid/)
 </br>
@@ -27,7 +44,7 @@
 
 ■ Instant Neural Graphics Primitives with a Multiresolution Hash Encoding (SIGGRAPH 2022) 
 </br>
-&emsp; □ [Paper Study](/InstantNGP/InstantNGP.md)
+&emsp; □ [Paper Review](/InstantNGP/InstantNGP.md)
 </br>
 &emsp; □ [Code Practice](/InstantNGP)
 </br>
@@ -35,7 +52,7 @@
 
 ■ NeRF : Representing Scenes as Neural Radiance for View Synthesis (ECCV 2020)
 </br>
-&emsp;  □ [Paper Study](/NeRF/NeRF.md)
+&emsp;  □ [Paper Review](/NeRF/NeRF.md)
 </br>
 &emsp; □ [Code Practice](/NeRF/NeRF.ipynb)
 </br>
@@ -43,14 +60,14 @@
 
 ■ PIFuHD : Multi-Level Pixel Aligned Implicit Function for High-Resolution 3D Human Digitization (CVPR 2020)
 </br>
-&emsp; □ [Paper Study](/PIFuHD/PIFuHD.md)
+&emsp; □ [Paper Review](/PIFuHD/PIFuHD.md)
 </br>
 &emsp; □ [Code Practice](/PIFuHD/)
 </br>
 
 ■ Text2Mesh : Text-Driven Neural Stylization for Meshes (CVPR 2022)
 </br>
-&emsp; □ [Paper Study](/Text2Mesh/Text2Mesh.md)
+&emsp; □ [Paper Review](/Text2Mesh/Text2Mesh.md)
 </br>
 &emsp; □ [Code Practice](/Text2Mesh/)
 </br>
