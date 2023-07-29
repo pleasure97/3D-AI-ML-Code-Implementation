@@ -19,13 +19,13 @@
 
 ■ DynIBaR : Neural Dynamic Image-Based Rendering (CVPR 2023)
 </br>
-&emsp; □ [Paper Review](/DynIBaR/DynIBaR.pdf)
+&emsp; □ [Paper Review](/DynIBaR/dynibar.pdf)
 </br>
 
 
 ■ Mip-NeRF : A Multiscale Representation for Anti-Aliasing Neural Networks (CVPR 2021)
 </br>
-&emsp; □ [Paper Review](/Mip-NeRF/Mip-Nerf.pdf)
+&emsp; □ [Paper Review](/Mip-NeRF/Mip-NeRF.pdf)
 </br>
 
 
