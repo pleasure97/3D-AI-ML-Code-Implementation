@@ -1,14 +1,12 @@
 
 
 # 3D Machine Learning Study & Practice
-
 ---
 
 ## Notices 
-
 ---
 
->[!NOTE]\
+>[!IMPORTANT]\
 > These are the ***Reviews*** from 3D Machine Learning research papers, along with ***My Implementations*** of their models.
 
 >[!NOTE]\
@@ -17,18 +15,19 @@
 ---
 
 ## 2025 
-
 ---
 
 ■ 3DGS : 3D Gaussian Splatting for Real-Time Radiance Field Rendering (SIGGRAPH 2023)
 </br>
-&emsp; □ [Paper Review](/3DGS/Gaussian_Splatting.ipynb) (ENG)
+&emsp; □ [Paper Review & Code Practice](/2025/3DGS/Gaussian_Splatting.ipynb) (ENG)
 </br>
 
 
 ## 2023
-
 ---
+
+<details>
+<summary>Click to expand</summary>
 
 ■ DynIBaR : Neural Dynamic Image-Based Rendering (CVPR 2023)
 </br>
