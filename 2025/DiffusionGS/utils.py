@@ -1,6 +1,5 @@
-import trimesh
-import numpy as np
-
+import trimesh 
+import numpy as np 
 def center_scale_mesh(mesh: trimesh.Trimesh):
 
   # Calculate the minimum, maximum bound and center
