@@ -1,7 +1,7 @@
 import torch
-import torch.nn as nn 
+import torch.nn as nn
 import torch.nn.functional as F
-import torchvision 
+import torchvision
 
 def get_point_distribution_loss(rays_o, rays_d, k:int, sigma_0: float=0.5):
   pass
@@ -19,8 +19,8 @@ class VGGLoss(nn.Module):
 
     for block in blocks:
       for param in block.parameters():
-        param.requires_grad=False 
-    
+        param.requires_grad=False
+
     self.blocks = nn.ModuleList(blocks)
     self.transform = F.interpolate
     self.resize = resize
@@ -50,7 +50,7 @@ class VGGLoss(nn.Module):
         gram_x = act_x @ act_x.permute(0, 2, 1)
         gram_y = act_y @ act_y.permute(0, 2, 1)
         loss += F.l1_loss(gram_x, gram_y)
-    return loss 
+    return loss
 
 def get_denoising_loss(source: torch.Tensor, target: torch.Tensor, hyperparameter: float=0.8):
   L2_Loss = nn.MSELoss()

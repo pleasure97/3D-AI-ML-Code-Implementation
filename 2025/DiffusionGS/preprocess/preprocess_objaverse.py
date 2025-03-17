@@ -1,7 +1,7 @@
-from utils import center_scale_mesh 
+from utils import center_scale_mesh
 import trimesh
 import numpy as np
-import os 
+import os
 
 def sample_random_views(num_images=32, radius=1.):
   camera_positions = []

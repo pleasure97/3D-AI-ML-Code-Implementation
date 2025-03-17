@@ -1,0 +1,2 @@
+from preprocess.preprocess_objaverse import sample_random_views, render_images_trimesh
+from preprocess.preprocess_mvimgnet import crop_image, remove_background
