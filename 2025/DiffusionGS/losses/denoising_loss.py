@@ -3,9 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
-def get_point_distribution_loss(rays_o, rays_d, k:int, sigma_0: float=0.5):
-  pass
-
 # Source code - https://gist.github.com/alper111/
 class VGGLoss(nn.Module):
   def __init__(self, resize=True):

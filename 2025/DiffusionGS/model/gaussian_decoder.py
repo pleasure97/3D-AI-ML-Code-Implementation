@@ -3,13 +3,15 @@ import torch.nn as nn
 
 class GaussianDecoder(nn.Module):
     def __init__(self, transformer_output_tensor: torch.Tensor, u_near: float, u_far: float, 
-                 input_dim: int=768, hidden_dim: int=768, output_dim: int=14, weight: float=0.5):
+                 k: int=100, input_dim: int=768, hidden_dim: int=768, output_dim: int=14, weight: float=0.5):
         super().__init__()
 
         self.transformer_output_tensor = transformer_output_tensor
 
-        self.u_near = u_near
-        self.u_far = u_far
+        self.u_near = torch.tensor(u_near, dtype=torch.float32)
+        self.u_far = torch.tensor(u_far, dtype=torch.float32)
+
+        self.k = k 
 
         self.mlp1 = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -19,9 +21,9 @@ class GaussianDecoder(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, output_dim))
-        
+
         # weight to control center
-        self.weight = weight
+        self.weight = torch.full((k,), weight, dtype=torch.float32)
 
     def forward(self, x):
         output1 = self.mlp1(x)
@@ -35,7 +37,8 @@ class GaussianDecoder(nn.Module):
 
         # Depth Transition
         depth = self.weight * self.u_near + (1 - self.weight) * self.u_far
-        position[:, :, 2] = depth
+        depth = depth.view(1, self.k, 1)
+        position[:, :, 2:3] = depth
 
         # Color is in [0, 1]
         color = torch.sigmoid(output2[:, :, 3:7])
