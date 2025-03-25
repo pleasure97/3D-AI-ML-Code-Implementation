@@ -1,0 +1,41 @@
+defaults:
+  - dataset: [Objaverse, MVImgNet, RealEstate10K, DL3DV10K]
+  - model/embedding: [timestep_embedding, positional_embedding]
+  - model/encoder: [timestep_mlp, patchify_mlp, transformer_block]
+  - model/decoder: [object_decoder, scene_decoder]
+  - loss: [point_distribution_loss, denoising_loss, novel_view_loss]
+
+wandb:
+  project: DiffusionGS
+
+mode: train
+
+dataset:
+
+data_loader:
+  train:
+    num_workers: 8
+    batch_size: 16
+    seed: 1234
+  test:
+    num_workers: 4
+    batch_size: 16
+    seed: 1234
+  validation:
+    num_workers: 1
+    batch_size: 16
+    seed: 1234
+
+optimizer:
+  lr: 4e-4
+  warm_up_steps: 2000
+
+train:
+
+test:
+  output_path: outputs/test
+
+trainer:
+  max_steps: -1
+  validation_check_interval: 200
+

@@ -1,0 +1,5 @@
+torch
+lightning
+hydra-core
+wandb
+pathlib

@@ -1,0 +1,9 @@
+name: object_decoder
+
+u_near: 0.1
+u_far: 4.2
+
+dim:
+  d_in: 768
+  d_hidden: 768
+  d_out: 14
