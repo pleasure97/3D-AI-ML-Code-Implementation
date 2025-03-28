@@ -1,7 +1,73 @@
 import torch
 import hydra
-from omegaconf import DictConfig
+import wandb
+from omegaconf import DictConfig, OmegaConf
+from config import load_root_config
+from utils.util import set_config
+from pathlib import Path
+from lightning.pytorch.loggers.wandb import WandbLogger
+from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch import Trainer
 
 @hydra.main(version_base=None, config_path="../config", config_name="main")
 def train(config_dict: DictConfig):
-    pass
+    config = load_root_config(config_dict)
+    set_config(config)
+
+    # Output Directory
+    output_dir = Path(hydra.core.hydra_config.HydraConfig.get()["runtime"]["output_dir"])
+    print(f"Saving outputs to {output_dir}")
+
+    # Callbacks
+    callbacks = []
+
+    # Logger
+    logger = WandbLogger(
+        project=config_dict.wandb.project,
+        mode=config_dict.wandb.mode,
+        name=f"{config_dict.wandb.name} ({output_dir.parent.name}/{output_dir.name})",
+        tags=config_dict.wandb.get("tags", None),
+        log_model="all",
+        save_dir=output_dir,
+        config=OmegaConf.to_container(config_dict)
+    )
+
+    # Callbacks - Learning Rate Monitor
+    callbacks.append(
+        LearningRateMonitor(logging_interval="step", log_momentum=True, log_weight_decay=True)
+    )
+
+    if wandb.run is not None:
+        wandb.run.log_code("script")
+
+    # Callbacks - Checkpoint
+    callbacks.append(
+        ModelCheckpoint(
+            output_dir / "checkpoints",
+            every_n_train_steps=config.checkpoint.every_num_time_steps,
+            save_top_k=config.checkpoint.save_top_k
+        )
+    )
+
+    # May need Step Tracker
+
+    # Trainer
+    trainer = Trainer(
+        max_epochs=-1,
+        accelerator="gpu",
+        logger=logger,
+        devices="auto",
+        callbacks=callbacks,
+        val_check_interval=config.trainer.validation_check_interval,
+        enable_progress_bar=True,
+        gradient_clip_val=config.trainer.gradient_clip_validation,
+        max_steps=config.trainer.max_steps)
+
+    torch.manual_see(config_dict.seed)
+
+
+
+
+
+if __name__ == "__main__":
+    train()
