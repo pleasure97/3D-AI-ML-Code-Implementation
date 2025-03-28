@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from .dataset_common import DatasetConfigCommon
+from .dataset_common import DatasetConfig
 from typing import Literal
 from pathlib import Path
 from torch.utils.data import Dataset
@@ -7,7 +7,7 @@ from .types import Stage
 import torchvision.transforms
 
 @dataclass
-class DatasetDL3DV10KConfig(DatasetConfigCommon):
+class DatasetDL3DV10KConfig(DatasetConfig):
     name: Literal["DL3DV10K"]
     roots: list[Path]
 

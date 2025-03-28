@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 @dataclass
-class DatasetConfigCommon:
+class DatasetConfig:
     image_shape: list[int]
     crop_image: list[int]
     remove_background: bool
