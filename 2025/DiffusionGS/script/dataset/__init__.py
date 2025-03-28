@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Literal
 from pathlib import Path
 from torch.utils.data import Dataset
-from .dataset_common import DatasetConfigCommon
+from .dataset_common import DatasetConfig
 from .dataset_objaverse import DatasetObjaverse
 from .dataset_mvimgnet import DatasetMVImgNet
 from .dataset_realestate10k import DatasetRealEstate10K
@@ -18,7 +18,7 @@ DATASETS: dict[str, Dataset] = {
 }
 
 def get_dataset(
-    config: DatasetConfigCommon,
+    config: DatasetConfig,
     stage: Stage,
     step_tracker: None
 ) -> Dataset:
