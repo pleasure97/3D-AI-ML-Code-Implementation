@@ -2,12 +2,14 @@ import torch
 import hydra
 import wandb
 from omegaconf import DictConfig, OmegaConf
-from config import load_root_config
-from utils.util import set_config
 from pathlib import Path
+from config import load_root_config
+from utils.config_util import set_config
+from utils.wandb_util import update_checkpoint_path
 from lightning.pytorch.loggers.wandb import WandbLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch import Trainer
+from dataset.dataloader import DataModule
 
 @hydra.main(version_base=None, config_path="../config", config_name="main")
 def train(config_dict: DictConfig):
@@ -49,6 +51,9 @@ def train(config_dict: DictConfig):
         )
     )
 
+    # Load Checkpoint Path if exists
+    checkpoint_path = update_checkpoint_path(config.checkpoint.load, config.wandb)
+
     # May need Step Tracker
 
     # Trainer
@@ -63,11 +68,14 @@ def train(config_dict: DictConfig):
         gradient_clip_val=config.trainer.gradient_clip_validation,
         max_steps=config.trainer.max_steps)
 
-    torch.manual_see(config_dict.seed)
+    torch.manual_seed(config_dict.seed + trainer.global_rank)
 
+    data_module = DataModule(config.dataset, config.dataloader, None, global_rank=trainer.global_rank)
 
-
-
+    if config.mode == "train":
+        trainer.fit(diffusion_gs, datamodule=data_module, ckpt_path=checkpoint_path)
+    else:
+        trainer.test(diffusion_gs, datamodule=data_module, ckpt_path=checkpoint_path)
 
 if __name__ == "__main__":
     train()

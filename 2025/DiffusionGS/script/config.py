@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Literal, Optional, TypeVar, Type
-from .dataset.dataloader import DatasetConfig
+from .dataset.dataloader import DatasetConfig, DataLoaderConfig
 from .model.diffusion import DiffusionConfig
 from .model.denoiser import DenoiserConfig
 from .model.decoder import DecoderConfig
@@ -32,6 +32,7 @@ class RootConfig:
     wandb: dict
     mode: Literal["train", "test"]
     dataset: DatasetConfig
+    dataloader: DataLoaderConfig
     model: ModelConfig
     optimizer: OptimizerConfig
     checkpoint: CheckpointConfig
