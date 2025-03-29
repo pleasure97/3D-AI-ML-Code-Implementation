@@ -1,10 +1,18 @@
 from dataclasses import dataclass
 import torch
 import torch.nn as nn
+from ..types import Gaussians
+
 
 @dataclass
-class DecoderConfig:
-    pass
+class GaussianDecoderConfig:
+    u_near: float
+    u_far: float
+    d_int: int
+    d_hidden: int
+    weight: float
+    d_out: int
+
 
 class GaussianDecoder(nn.Module):
     def __init__(self, transformer_output_tensor: torch.Tensor, u_near: float, u_far: float,
@@ -30,7 +38,7 @@ class GaussianDecoder(nn.Module):
         # weight to control center
         self.weight = torch.full((k,), weight, dtype=torch.float32)
 
-    def forward(self, x):
+    def forward(self, x) -> Gaussians:
         output1 = self.mlp1(x)
 
         output1 = output1 + self.transformer_output_tensor.mean(dim=1, keepdim=True)
@@ -57,4 +65,4 @@ class GaussianDecoder(nn.Module):
         # Opacity
         opacity = torch.sigmoid(output2[:, :, 13:14])
 
-        return position, color, scale, rotation, opacity
+        return Gaussians(position, rotation, )
