@@ -1,4 +1,24 @@
+from dataclasses import dataclass
 import torch
+from .loss import Loss
+from ..model.types import RasterizedOutput
+from ..dataset.types import BatchedExample
+from jaxtyping import Float
+from torch import Tensor
+
+
+@dataclass
+class PointDistributionLossConfig:
+  pass
+
+@dataclass
+class PointDistributionLossConfigWrapper:
+  A: PointDistributionLossConfig
+
+class PointDistributionLoss(Loss[PointDistributionLossConfig, PointDistributionLossConfigWrapper]):
+  def forward(self, prediction: RasterizedOutput, batch: BatchedExample) -> Float[Tensor]:
+    pass
+
 
 def get_point_distribution_loss(decoder: GaussianDecoder, rays_o, rays_d, k:int, sigma_0: float=0.5):
   assert isinstance(decoder, GaussianDecoder), f'Expected Type is GaussianDecoder, but Current Type is {decoder.type}'
