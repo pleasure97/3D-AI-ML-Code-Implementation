@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models
 
+
+@torch.no_grad
 def get_psnr(clean_image: torch.Tensor, noisy_image: torch.Tensor, max_value=1.) -> float:
     MSE = F.mse_loss(clean_image, noisy_image)
     if MSE == 0:
@@ -10,6 +12,7 @@ def get_psnr(clean_image: torch.Tensor, noisy_image: torch.Tensor, max_value=1.)
 
     psnr = 10 * torch.log10(max_value ** 2 / MSE)
     return psnr.item()
+
 
 class LPIPS(nn.Module):
     def __init__(self, device: torch.device, model: str = 'vgg'):
@@ -53,41 +56,46 @@ class LPIPS(nn.Module):
 
 
 def gaussian_window(window_size: int, sigma: float, device: torch.device) -> torch.Tensor:
-  coordinates = torch.arange(window_size, device=device).float() - window_size // 2
-  gaussian = torch.exp(-(coordinates ** 2) / (2 * sigma ** 2))
-  gaussian /= gaussian.sum()
-  return gaussian # [window_size]
+    coordinates = torch.arange(window_size, device=device).float() - window_size // 2
+    gaussian = torch.exp(-(coordinates ** 2) / (2 * sigma ** 2))
+    gaussian /= gaussian.sum()
+    return gaussian  # [window_size]
+
 
 def create_window(window_size: int, channel: int, device: torch.device) -> torch.Tensor:
-  _1D_window = gaussian_window(window_size, 1.5, device).unsqueeze(1) # [window_size, 1]
-  _2D_window = _1D_window @ _1D_window.T # [window_size, window_size]
-  window = _2D_window.expand(channel, 1, window_size, window_size)  # [channel, 1, window_size, window_size)
-  return window
+    _1D_window = gaussian_window(window_size, 1.5, device).unsqueeze(1)  # [window_size, 1]
+    _2D_window = _1D_window @ _1D_window.T  # [window_size, window_size]
+    window = _2D_window.expand(channel, 1, window_size, window_size)  # [channel, 1, window_size, window_size)
+    return window
 
-def ssim(image1: torch.Tensor, image2: torch.Tensor, window_size: int=11, C1: float=0.01**2, C2: float=0.03**2) -> float:
-  channel = image1.shape[1] # Check image1's shape is [BATCH_SIZE, CHANNELS, HEIGHT, WIDTH]
-  window = create_window(window_size, channel, image1.device)
 
-  mu1 = F.conv2d(image1, window, padding=window_size//2, groups=channel)
-  mu2 = F.conv2d(image2, window, padding=window_size//2, groups=channel)
+@torch.no_grad
+def ssim(image1: torch.Tensor, image2: torch.Tensor, window_size: int = 11, C1: float = 0.01 ** 2,
+         C2: float = 0.03 ** 2) -> float:
+    channel = image1.shape[1]  # Check image1's shape is [BATCH_SIZE, CHANNELS, HEIGHT, WIDTH]
+    window = create_window(window_size, channel, image1.device)
 
-  mu1_square, mu2_square, mu1_mu2 = mu1 ** 2, mu2 ** 2, mu1 * mu2
-  sigma1_square = F.conv2d(image1 ** 2, window, padding=window_size//2, groups=channel) - mu1_square
-  sigma2_square = F.conv2d(image2 ** 2, window, padding=window_size//2, groups=channel) - mu2_square
-  sigma1_sigma2 = F.conv2d(image1 * image2, window, padding=window_size//2, groups=channel) - mu1_mu2
+    mu1 = F.conv2d(image1, window, padding=window_size // 2, groups=channel)
+    mu2 = F.conv2d(image2, window, padding=window_size // 2, groups=channel)
 
-  # luminance - Average of Pixel Coordinates
-  luminance = (2 * mu1_mu2 + C1) / (mu1_square + mu2_square + C1)
+    mu1_square, mu2_square, mu1_mu2 = mu1 ** 2, mu2 ** 2, mu1 * mu2
+    sigma1_square = F.conv2d(image1 ** 2, window, padding=window_size // 2, groups=channel) - mu1_square
+    sigma2_square = F.conv2d(image2 ** 2, window, padding=window_size // 2, groups=channel) - mu2_square
+    sigma1_sigma2 = F.conv2d(image1 * image2, window, padding=window_size // 2, groups=channel) - mu1_mu2
 
-  # contrast - Standard Deviation of Pixel Coordinates
-  contrast = (2 * sigma1_sigma2 + C2) / (sigma1_square + sigma2_square + C2)
+    # luminance - Average of Pixel Coordinates
+    luminance = (2 * mu1_mu2 + C1) / (mu1_square + mu2_square + C1)
 
-  # structure comparison - Correlation between Normalized Images
-  C3 = C2 / 2
-  structure = (sigma1_sigma2 + C3) / (sigma1_square.sqrt() * sigma2_square.sqrt() + C3)
+    # contrast - Standard Deviation of Pixel Coordinates
+    contrast = (2 * sigma1_sigma2 + C2) / (sigma1_square + sigma2_square + C2)
 
-  ssim_map = luminance * contrast * structure
-  return ssim_map.mean()
+    # structure comparison - Correlation between Normalized Images
+    C3 = C2 / 2
+    structure = (sigma1_sigma2 + C3) / (sigma1_square.sqrt() * sigma2_square.sqrt() + C3)
+
+    ssim_map = luminance * contrast * structure
+    return ssim_map.mean()
+
 
 def get_ssim(image1: torch.Tensor, image2: torch.Tensor) -> float:
-  return 1 - ssim(image1, image2)
+    return 1 - ssim(image1, image2)

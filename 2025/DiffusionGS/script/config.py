@@ -37,7 +37,7 @@ class RootConfig:
     optimizer: OptimizerConfig
     checkpoint: CheckpointConfig
     trainer: TrainerConfig
-    loss: list[]
+    loss: list[str]
     train: TrainConfig
     test: TestConfig
     seed: int
