@@ -11,7 +11,7 @@ from decoder.decoder import GaussianDecoder
 from ..loss.loss import Loss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
-
+from fast_gauss import GaussianRasterizationSettings, GaussianRasterizer
 
 @dataclass
 class OptimizerConfig:
@@ -32,8 +32,8 @@ class TestConfig:
 
 class DiffusionGS(LightningModule):
     logger: Optional[WandbLogger]
-    timestep_mlp: TimestepEmbedding,
-    patchify_mlp: PatchifyEmbedding,
+    timestep_mlp: TimestepEmbedding
+    patchify_mlp: PatchifyEmbedding
     transformer_backbone: TransformerBackbone
     gaussian_decoder: GaussianDecoder
     losses: nn.ModuleList
@@ -61,6 +61,8 @@ class DiffusionGS(LightningModule):
     def training_step(self, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
         # TODO - Run the model
         TimestepMLP(...)
+
+        GaussianRasterizer()
 
         # TODO - Compute the metrics
 
