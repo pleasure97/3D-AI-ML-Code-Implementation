@@ -13,6 +13,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
 from fast_gauss import GaussianRasterizationSettings, GaussianRasterizer
 
+
 @dataclass
 class OptimizerConfig:
     learning_rate: float
@@ -68,7 +69,10 @@ class DiffusionGS(LightningModule):
 
         # TODO - Compute the loss
 
+        # TODO - Tell the dataloader process about the current step.
+
         return total_loss
+
 
     @rank_zero_only
     def validation_step(self, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
