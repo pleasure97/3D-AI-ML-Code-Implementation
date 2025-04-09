@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 
-
 def get_rays(height, width, intrinsics, c2w, jitter=False):
     """
       height : image height

@@ -14,10 +14,10 @@ class ViewSamplerConfig:
     num_target_views: int
     source_views: list[int] | None
     target_views: list[int] | None
-    theta1: float   # Maximum Angle between Noisy View and Condition View
-    theta2: float   # Maximum Angle between Noisy View and Novel View
-    phi1: float     # Minimum Cosine Angle between Noisy Direction and Condition Direction
-    phi2: float     # Minimum Cosine Angle between Novel Direction and Condition Direction
+    theta1: float   # Maximum Angle between Noisy View and Condition View (45.)
+    theta2: float   # Maximum Angle between Noisy View and Novel View (60.)
+    phi1: float     # Minimum Cosine Angle between Noisy Direction and Condition Direction (60.)
+    phi2: float     # Minimum Cosine Angle between Novel Direction and Condition Direction (75.)
 
 
 class ViewSampler:
@@ -40,9 +40,7 @@ class ViewSampler:
         return torch.rad2deg(torch.acos(dot_product))
 
     def sample(self,
-               scene: str,
                extrinsics: Float[Tensor, "view 4 4"],
-               intrinsics: Float[Tensor, "view 3 3"],
                device: torch.device = "cuda" if torch.cuda.is_available() else "cpu") \
             -> tuple[Int64[Tensor, " source_view"], Int64[Tensor, " target_view"]]:
         num_views = extrinsics.shape[0]
@@ -57,15 +55,15 @@ class ViewSampler:
         condition_direction = camera_forward[condition_index]
 
         # Filter based on Position (theta1, theta2)
-        theta1 = torch.deg2rad(torch.tensor(45., device=device))
-        theta2 = torch.deg2rad(torch.tensor(60., device=device))
+        theta1 = torch.deg2rad(torch.tensor(self.config.theta1, device=device))
+        theta2 = torch.deg2rad(torch.tensor(self.config.theta2, device=device))
 
         positions_angles = self.compute_angle_between(camera_position - condition_position,
                                                       torch.zeros_like(camera_position, device=device))
 
         # Filter based on Direction (phi1, phi2)
-        phi1 = torch.deg2rad(torch.tensor(60., device=device))
-        phi2 = torch.deg2rad(torch.tensor(75., device=device))
+        phi1 = torch.deg2rad(torch.tensor(self.config.phi1, device=device))
+        phi2 = torch.deg2rad(torch.tensor(self.config.phi2, device=device))
 
         forward_angles = self.compute_angle_between(camera_forward, condition_direction.expand_as(camera_forward))
 

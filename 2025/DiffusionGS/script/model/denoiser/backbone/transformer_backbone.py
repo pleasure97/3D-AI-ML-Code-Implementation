@@ -1,41 +1,39 @@
 from dataclasses import dataclass
 from typing import Literal
-from ..embedding.timestep_embedding import TimestepEmbedding
-import torch
+from ..embedding.timestep_embedding import TimestepEmbeddingConfig, TimestepEmbedding
 import torch.nn as nn
-
 
 @dataclass
 class BackboneLayerConfig:
     name: Literal["TransformerBackboneLayer"]
-    timestep_embedding: TimestepEmbedding
+    timestep_embedding: TimestepEmbedding[TimestepEmbeddingConfig]
+    attention_dim: int
     num_heads: int
-    d_out: int
-
+    dropout: float
 @dataclass
 class BackboneConfig:
     name: Literal["TransformerBackbone"]
-    model:
-    num_heads: int
-    d_out: int
+    layer: BackboneLayerConfig
+    num_layers: int
 
-class TransformerBackboneLayer(nn.Module):
-    def __init__(self, timestep_embedding: torch.Tensor, embedding_dim: int = 768, num_heads: int = 12,
-                 dropout: float = 0.1):
+class TransformerBackboneLayer(nn.Module, BackboneLayerConfig):
+    def __init__(self, config: BackboneLayerConfig):
         super().__init__()
 
-        self.timestep_embedding = timestep_embedding
+        self.config = config
 
-        self.self_attn = nn.MultiheadAttention(embedding_dim, num_heads=12)
+        self.timestep_embedding = self.config.timestep_embedding
 
-        self.layer_norm = nn.LayerNorm(normalized_shape=embedding_dim)
+        self.self_attn = nn.MultiheadAttention(self.config.attention_dim, num_heads=12)
+
+        self.layer_norm = nn.LayerNorm(normalized_shape=self.config.attention_dim)
 
         self.mlp = nn.Sequential(
-            nn.Linear(embedding_dim, embedding_dim * 4),
+            nn.Linear(self.config.attention_dim, self.config.attention_dim * 4),
             nn.GELU(),
-            nn.Dropout(p=dropout),
-            nn.Linear(embedding_dim * 4, embedding_dim),
-            nn.Dropout(p=dropout)
+            nn.Dropout(p=self.config.dropout),
+            nn.Linear(self.attention_dim * 4, self.attention_dim),
+            nn.Dropout(p=self.config.dropout)
         )
 
     def forward(self, x):
@@ -55,16 +53,16 @@ class TransformerBackboneLayer(nn.Module):
 
 
 class TransformerBackbone(nn.Module):
-    def __init__(self, num_layers: int, timestep_embedding: torch.Tensor, embedding_dim: int = 768, num_heads: int = 12,
-                 dropout: float = 0.1):
+    def __init__(self, config: BackboneConfig):
         super().__init__()
 
-        self.timestep_embedding = timestep_embedding
-
+        self.config = config
         self.layers = nn.ModuleList([
-            TransformerBackboneLayer(timestep_embedding=self.timestep_embedding, embedding_dim=embedding_dim,
-                                     num_heads=num_heads, dropout=dropout)
-            for _ in range(num_layers)])
+            TransformerBackboneLayer(timestep_embedding=self.config.layer.timestep_embedding,
+                                     embedding_dim=self.config.layer.attention_dim,
+                                     num_heads=self.config.layer.num_heads,
+                                     dropout=self.config.layer.dropout)
+            for _ in range(self.config.num_layers)])
 
     def forward(self, x):
         for layer in self.layers:

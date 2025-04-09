@@ -3,13 +3,14 @@ import hydra
 import wandb
 from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
-from config import load_root_config
+from .config import load_root_config
 from utils.config_util import set_config
 from utils.wandb_util import update_checkpoint_path
 from lightning.pytorch.loggers.wandb import WandbLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch import Trainer
 from dataset.dataloader import DataModule
+from .model.decoder import decoder
 
 @hydra.main(version_base=None, config_path="../config", config_name="main")
 def train(config_dict: DictConfig):
@@ -69,6 +70,15 @@ def train(config_dict: DictConfig):
         max_steps=config.trainer.max_steps)
 
     torch.manual_seed(config_dict.seed + trainer.global_rank)
+
+    diffusion_gs = DiffusionGS(
+        config.optimizer,
+        config.test,
+        config.train,
+        get_denoiser(config.model.denoiser),
+        get_decoder(config.model.decoder, config.dataset),
+        get_losses(config.loss),
+        step_tracker)
 
     data_module = DataModule(config.dataset, config.dataloader, None, global_rank=trainer.global_rank)
 

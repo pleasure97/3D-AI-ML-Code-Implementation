@@ -1,4 +1,11 @@
+from dataclasses import dataclass
 import torch.nn as nn
+
+@dataclass
+class PatchEmbeddingConfig:
+    in_channels: int
+    patch_size: int
+    embedding_dim: int
 
 class PatchEmbedding(nn.Module):
     """Turns a 2D input image into a 1D sequence learnable embedding vector.
@@ -8,20 +15,21 @@ class PatchEmbedding(nn.Module):
         patch_size (int): Size of patches to convert input image into. Defaults to 16.
         embedding_dim (int): Size of embedding to turn image into. Defaults to 768.
     """
+
     def __init__(self,
-                 in_channels:int=9,
-                 patch_size:int=16,
-                 embedding_dim:int=768):
+                 config: PatchEmbeddingConfig):
         super().__init__()
 
-        self.in_channels = in_channels
-        self.patch_size = patch_size
-        self.embedding_dim = embedding_dim
+        self.config = config
 
-        self.patcher = nn.Conv2d(in_channels=in_channels,
-                                 out_channels=embedding_dim,
-                                 kernel_size=patch_size,
-                                 stride=patch_size,
+        self.in_channels = self.config.in_channels
+        self.patch_size = self.config.patch_size
+        self.embedding_dim = self.config.embedding_dim
+
+        self.patcher = nn.Conv2d(in_channels=self.in_channels,
+                                 out_channels=self.embedding_dim,
+                                 kernel_size=self.patch_size,
+                                 stride=self.patch_size,
                                  padding=0)
 
         self.flatten = nn.Flatten(start_dim=2, end_dim=-1)

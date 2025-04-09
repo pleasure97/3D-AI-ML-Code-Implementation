@@ -1,13 +1,19 @@
+from dataclasses import dataclass
 import torch
 import torch.nn as nn
 import math
 
+@dataclass
+class TimestepEmbeddingConfig:
+    time_dim: int
+    max_period: int
 
-class TimestepEmbedding(nn.Module):
-    def __init__(self, time_dim: int, max_period: int = 10_000):
+class TimestepEmbedding(nn.Module, TimestepEmbeddingConfig):
+    def __init__(self, config: TimestepEmbeddingConfig):
         super().__init__()
-        self.time_dim = time_dim
-        self.max_period = max_period
+        self.config = config
+        self.time_dim = self.config.time_dim
+        self.max_period = self.config.max_period
 
     def forward(self, x):
         device = x.device
