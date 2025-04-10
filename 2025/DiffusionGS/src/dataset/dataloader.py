@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from lightning.pytorch import LightningDataModule
 from . import DatasetConfig, get_dataset
 from torch.utils.data import DataLoader
+from src.utils.step_tracker import StepTracker
 
 @dataclass
 class DataLoaderStageConfig:
@@ -18,13 +19,13 @@ class DataLoaderConfig:
 class DataModule(LightningDataModule):
     dataset_config: DatasetConfig
     dataloader_config: DataLoaderConfig
-    step_tracker: None
+    step_tracker: StepTracker | None
     global_rank: int
 
     def __init__(self,
                  dataset_config: DatasetConfig,
                  dataloader_config: DataLoaderConfig,
-                 step_tracker: None,
+                 step_tracker: StepTracker,
                  global_rank: int=0):
         super().__init__()
         self.dataset_config = dataset_config

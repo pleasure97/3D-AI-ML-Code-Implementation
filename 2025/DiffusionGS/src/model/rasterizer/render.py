@@ -1,7 +1,8 @@
 from fast_gauss import GaussianRasterizationSettings, GaussianRasterizer
 from jaxtyping import Float
 from torch import Tensor
-from script.utils.geometry_util import get_fov
+from src.utils.geometry_util import get_fov
+
 
 def render(
         extrinsics: Float[Tensor, "batch 4 4"],

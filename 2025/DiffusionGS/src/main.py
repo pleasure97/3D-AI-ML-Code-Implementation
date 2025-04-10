@@ -41,7 +41,7 @@ def train(config_dict: DictConfig):
     )
 
     if wandb.run is not None:
-        wandb.run.log_code("script")
+        wandb.run.log_code("src")
 
     # Callbacks - Checkpoint
     callbacks.append(

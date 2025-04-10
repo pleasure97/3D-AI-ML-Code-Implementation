@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal
 from torch import nn, Tensor
-from script.dataset.types import BatchedViews
+from src.dataset.types import BatchedViews
 from jaxtyping import Float
 from backbone.transformer_backbone import BackboneConfig, TransformerBackbone
 from embedding.patch_embedding import PatchEmbeddingConfig, PatchEmbedding

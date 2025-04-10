@@ -8,6 +8,7 @@ from denoiser.embedding.timestep_embedding import TimestepMLP
 from denoiser.embedding.positional_embedding import PatchEmbedding
 from denoiser.backbone.transformer_backbone import TransformerBackbone
 from decoder.decoder import GaussianDecoder
+from src.utils.step_tracker import StepTracker
 from ..loss.loss import Loss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
@@ -41,7 +42,7 @@ class DiffusionGS(LightningModule):
     optimizer_config: OptimizerConfig
     train_config: TrainConfig
     test_config: TestConfig
-    step_tracker: None  # TODO - Whether to use step tracker
+    step_tracker: StepTracker | None
 
     def __init__(self,
                  optimizer_config: OptimizerConfig,
@@ -52,7 +53,7 @@ class DiffusionGS(LightningModule):
                  transformer_backbone: TransformerBackbone,
                  gaussian_decoder: GaussianDecoder,
                  losses: list[Loss],
-                 step_tracker: None) -> None:
+                 step_tracker: StepTracker) -> None:
         super().__init__()
         self.optimizer_config = optimizer_config
         self.train_config = train_config
