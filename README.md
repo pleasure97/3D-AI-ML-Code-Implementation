@@ -15,12 +15,12 @@
 
 ■ DiffusionGS : Baking Gaussian Splatting into Diffusion Denosier for Fast and Scalable Single-Stage Image-to-3D Generation
 </br>
-&emsp; □ [Paper Review & Code Practice](/2025/DiffusionGS/DiffusionGS.ipynb) (ENG) (Updating)
+&emsp; □ [Paper Review & Code Practice](/2025/DiffusionGS/DiffusionGS.ipynb) (ENG) **(Updating)**
 </br>
 
 ■ 3DGS : 3D Gaussian Splatting for Real-Time Radiance Field Rendering (SIGGRAPH 2023)
 </br>
-&emsp; □ [Paper Review & Code Practice](/2025/3DGS/Gaussian_Splatting.ipynb) (ENG) (Updating)
+&emsp; □ [Paper Review & Code Practice](/2025/3DGS/Gaussian_Splatting.ipynb) (ENG) 
 </br>
 
 
