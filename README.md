@@ -15,12 +15,12 @@
 
 ■ DiffusionGS : Baking Gaussian Splatting into Diffusion Denosier for Fast and Scalable Single-Stage Image-to-3D Generation
 </br>
-&emsp; □ [Paper Review & Code Practice](/2025/DiffusionGS/DiffusionGS.ipynb) (ENG) **(Updating)**
+&emsp; □ [Paper Review & Code Practice](/2025/DiffusionGS/DiffusionGS.ipynb) **(Updating)**
 </br>
 
 ■ 3DGS : 3D Gaussian Splatting for Real-Time Radiance Field Rendering (SIGGRAPH 2023)
 </br>
-&emsp; □ [Paper Review & Code Practice](/2025/3DGS/Gaussian_Splatting.ipynb) (ENG) 
+&emsp; □ [Paper Review & Code Practice](/2025/3DGS/Gaussian_Splatting.ipynb) 
 </br>
 
 
@@ -28,19 +28,19 @@
 
 ■ DynIBaR : Neural Dynamic Image-Based Rendering (CVPR 2023)
 </br>
-&emsp; □ [Paper Review](/2023/DynIBaR/dynibar.pdf) (ENG)
+&emsp; □ [Paper Review](/2023/DynIBaR/dynibar.pdf) 
 </br>
 
 
 ■ Mip-NeRF : A Multiscale Representation for Anti-Aliasing Neural Networks (CVPR 2021)
 </br>
-&emsp; □ [Paper Review](/2023/Mip-NeRF/Mip-NeRF.pdf) (ENG)
+&emsp; □ [Paper Review](/2023/Mip-NeRF/Mip-NeRF.pdf) 
 </br>
 
 
 ■ PointMLP : Rethinking Network Design and Local Geometry in Point Cloud - A Simple Residual MLP Framework (ICLR 2022)
 </br>
-&emsp; □ [Paper Review](/2023/PointMLP/PointMLP.pdf) (ENG)
+&emsp; □ [Paper Review](/2023/PointMLP/PointMLP.pdf) 
 </br>
 
 ■ Face-Vid2Vid : One-Shot Free-View Neural Talking-Head Synthesis for Video Conferencing (CVPR 2021)
