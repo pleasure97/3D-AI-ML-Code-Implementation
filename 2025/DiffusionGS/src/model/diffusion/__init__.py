@@ -33,6 +33,7 @@ class NoisyImageGenerator:
 
         return original_sample, noisy_samples
 
+    @staticmethod
     def visualize(self, original_sample, noisy_samples, num_timesteps):
         timesteps = torch.arange(1, 101, num_timesteps)
 
