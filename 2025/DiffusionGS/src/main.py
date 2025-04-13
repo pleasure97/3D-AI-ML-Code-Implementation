@@ -3,14 +3,13 @@ import hydra
 import wandb
 from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
-from .config import load_root_config
+from src.config import load_root_config
 from utils.config_util import set_config
 from utils.wandb_util import update_checkpoint_path
 from lightning.pytorch.loggers.wandb import WandbLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch import Trainer
 from dataset.dataloader import DataModule
-from .model.decoder import decoder
 
 @hydra.main(version_base=None, config_path="../config", config_name="main")
 def train(config_dict: DictConfig):
@@ -86,6 +85,7 @@ def train(config_dict: DictConfig):
         trainer.fit(diffusion_gs, datamodule=data_module, ckpt_path=checkpoint_path)
     else:
         trainer.test(diffusion_gs, datamodule=data_module, ckpt_path=checkpoint_path)
+
 
 if __name__ == "__main__":
     train()
