@@ -1,0 +1,24 @@
+name: DiffusionGS
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - torch
+  - pytorch-lightning
+  - hydra-core
+  - wandb
+  - omegaconf
+  - matplotlib
+  - pillow
+  - numpy
+  - torchvision
+  - einops
+  - pip
+  - pip:
+      - objaverse
+      - pathlib
+      - jaxtyping
+      - diffusers
+      - dacite
+      - pycolmap
