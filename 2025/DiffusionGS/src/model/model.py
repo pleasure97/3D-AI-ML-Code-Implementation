@@ -5,7 +5,8 @@ from typing import Optional
 from pathlib import Path
 from torch import nn
 from denoiser.embedding.timestep_embedding import TimestepMLP
-from denoiser.embedding.positional_embedding import PatchEmbedding
+from denoiser.embedding.patch_embedding import PatchMLP
+from denoiser.embedding.positional_embedding import PositionalEmbedding
 from denoiser.backbone.transformer_backbone import TransformerBackbone
 from decoder.decoder import GaussianDecoder
 from src.utils.step_tracker import StepTracker
@@ -13,7 +14,8 @@ from ..loss.loss import Loss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
 from fast_gauss import GaussianRasterizationSettings, GaussianRasterizer
-
+from lightning.pytorch.utilities import rank_zero_only
+from src.dataset.types import BatchedExample
 
 @dataclass
 class OptimizerConfig:
@@ -24,7 +26,7 @@ class OptimizerConfig:
 
 @dataclass
 class TrainConfig:
-    pass
+    timesteps: int
 
 
 @dataclass
@@ -34,8 +36,9 @@ class TestConfig:
 
 class DiffusionGS(LightningModule):
     logger: Optional[WandbLogger]
-    timestep_mlp: TimestepEmbedding
-    patchify_mlp: PatchifyEmbedding
+    timestep_mlp: TimestepMLP
+    patch_mlp: PatchMLP
+    positional_embedding: PositionalEmbedding
     transformer_backbone: TransformerBackbone
     gaussian_decoder: GaussianDecoder
     losses: nn.ModuleList
@@ -48,8 +51,9 @@ class DiffusionGS(LightningModule):
                  optimizer_config: OptimizerConfig,
                  train_config: TrainConfig,
                  test_config: TestConfig,
-                 timestep_mlp: TimestepEmbedding,
-                 patchify_mlp: PatchifyEmbedding,
+                 timestep_mlp: TimestepMLP,
+                 patch_mlp: PatchMLP,
+                 positional_embedding: PositionalEmbedding,
                  transformer_backbone: TransformerBackbone,
                  gaussian_decoder: GaussianDecoder,
                  losses: list[Loss],
@@ -60,26 +64,38 @@ class DiffusionGS(LightningModule):
         self.test_config = test_config
         self.step_tracker = step_tracker
 
-    def training_step(self, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
+        self.timestep_mlp = timestep_mlp
+        self.patch_mlp = patch_mlp
+        self.positional_embedding = positional_embedding
+        self.transformer_backbone = transformer_backbone
+        self.gaussian_decoder = gaussian_decoder
+        self.losses = nn.ModuleList(losses)
+
+    def training_step(self, batch, batch_index):
+        batch: BatchedExample = self.(batch)
+        _, _, _, height, width = batch["target"]["image"].shape
+
         # TODO - Run the model
-        TimestepMLP(...)
+        for timestep in (self.train_config.timesteps):
+            transformer_backbone_input = self.patch_mlp(batch["source"]) + self.positional_embedding
+            self.transformer_backbone(transformer_backbone_input, timestep)
 
-        GaussianRasterizer()
+            GaussianRasterizer()
 
-        # TODO - Compute the metrics
+            # TODO - Compute the metrics
 
-        # TODO - Compute the loss
+            # TODO - Compute the loss
 
-        # TODO - Tell the dataloader process about the current step.
+            # TODO - Tell the dataloader process about the current step.
 
         return total_loss
 
 
     @rank_zero_only
-    def validation_step(self, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
+    def validation_step(self, batch, batch_index):
         pass
 
-    def test_step(self, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
+    def test_step(self, batch, batch_index):
         pass
 
     def configure_optimizers(self):

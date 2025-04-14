@@ -5,6 +5,7 @@ import torch
 from PIL import Image
 import numpy as np
 from ..types import BatchedViews, BatchedExample
+from rembg import remove
 
 
 def rescale(
@@ -46,7 +47,7 @@ def crop_and_scale(
         images: Float[Tensor, "*#batch channel height width"],
         intrinsics: Float[Tensor, "*#batch 3 3"],
         shape: tuple[int, int]
-) -> tuple[Float[Tensor, "*# batch channel height_out width_out"], Float[Tensor, "*# batch 3 3"]]:
+) -> tuple[Float[Tensor, "*#batch channel height_out width_out"], Float[Tensor, "*#batch 3 3"]]:
     *_, height_in, width_in = images.shape
     height_out, width_out = shape
     assert height_out <= height_in and width_out <= width_in
@@ -64,9 +65,16 @@ def crop_and_scale(
     return center_crop(images, intrinsics, shape)
 
 def crop_views(views: BatchedViews, shape: tuple[int, int]) -> BatchedViews:
-    images, intrinsics = crop_and_scale(views["image"], view["intrinsics"], shape)
+    images, intrinsics = crop_and_scale(views["image"], views["intrinsics"], shape)
     return {**views, "images": images, "intrinsics": intrinsics}
 
 def crop_example(example: BatchedExample, shape: tuple[int, int]) -> BatchedExample:
     return {**example, "source": crop_views(example["source"], shape), "target": crop_views(example["target"], shape)}
 
+def remove_background(images: Float[Tensor, "*#batch channel height width"]):
+    *batch, channel, height, width = images.shape
+    images = images.reshape(-1, channel, height, width)
+    images = torch.stack([remove(image) for image in images])
+    images = images.reshape(*batch, channel, height, width)
+
+    return images

@@ -7,6 +7,11 @@ class PatchEmbeddingConfig:
     patch_size: int
     embedding_dim: int
 
+@dataclass
+class PatchMLPConfig:
+    embedding: PatchEmbeddingConfig
+    out_dim: int
+
 class PatchEmbedding(nn.Module):
     """Turns a 2D input image into a 1D sequence learnable embedding vector.
 
@@ -38,3 +43,18 @@ class PatchEmbedding(nn.Module):
         x_patched = self.patcher(x)
         x_flattened = self.flatten(x_patched)
         return x_flattened.permute(0, 2, 1)
+
+class PatchMLP(nn.Module, PatchMLPConfig):
+    def __init__(self, config: PatchMLPConfig):
+        super().__init__()
+
+        self.config = config
+
+        self.patch_mlp = nn.Sequential(
+            PatchEmbedding(self.config.embedding),
+            nn.Linear(self.config.embedding.embedding_dim, self.config.out_dim),
+            nn.GELU(),
+            nn.Linear(self.config.out_dim, self.config.out_dim))
+
+    def forward(self, x):
+        return self.patch_mlp(x)

@@ -8,6 +8,11 @@ class TimestepEmbeddingConfig:
     time_dim: int
     max_period: int
 
+@dataclass
+class TimestepMLPConfig:
+    embedding: TimestepEmbeddingConfig
+    out_dim: int
+
 class TimestepEmbedding(nn.Module, TimestepEmbeddingConfig):
     def __init__(self, config: TimestepEmbeddingConfig):
         super().__init__()
@@ -28,15 +33,16 @@ class TimestepEmbedding(nn.Module, TimestepEmbeddingConfig):
         return embedding
 
 
-class TimestepMLP(nn.Module):
-    def __init__(self, fourier_dim: int, time_dim: int):
+class TimestepMLP(nn.Module, TimestepMLPConfig):
+    def __init__(self, config: TimestepMLPConfig):
         super().__init__()
 
+        self.config = config
         self.time_mlp = nn.Sequential(
-            TimestepEmbedding(fourier_dim),
-            nn.Linear(fourier_dim, time_dim),
+            TimestepEmbedding(self.config.embedding),
+            nn.Linear(self.config.embedding.time_dim, self.config.out_dim),
             nn.GELU(),
-            nn.Linear(time_dim, time_dim))
+            nn.Linear(self.config.out_dim, self.config.out_dim))
 
     def forward(self, x):
         return self.time_mlp(x)

@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from typing import Literal
-from ..embedding.timestep_embedding import TimestepEmbeddingConfig, TimestepEmbedding
+from ..embedding.timestep_embedding import TimestepMLPConfig, TimestepMLP
 import torch.nn as nn
 
 @dataclass
 class BackboneLayerConfig:
     name: Literal["TransformerBackboneLayer"]
-    timestep_embedding: TimestepEmbedding[TimestepEmbeddingConfig]
+    timestep_mlp: TimestepMLP[TimestepMLPConfig]
     attention_dim: int
     num_heads: int
     dropout: float
@@ -22,7 +22,7 @@ class TransformerBackboneLayer(nn.Module, BackboneLayerConfig):
 
         self.config = config
 
-        self.timestep_embedding = self.config.timestep_embedding
+        self.timestep_mlp = self.config.timestep_mlp
 
         self.self_attn = nn.MultiheadAttention(self.config.attention_dim, num_heads=12)
 
@@ -36,16 +36,17 @@ class TransformerBackboneLayer(nn.Module, BackboneLayerConfig):
             nn.Dropout(p=self.config.dropout)
         )
 
-    def forward(self, x):
+    def forward(self, x, timestep):
         # timestep_embedding : [batch_size, 1, embedding_dim]
-        x = x + self.timestep_embedding  # [batch_size, num_patches, embedding_dim]
+        timestep_embedding = self.timestep_mlp(timestep)
+        x = x + timestep_embedding  # [batch_size, num_patches, embedding_dim]
         x = x.transpose(0, 1)  # [num_patches, batch_size, embedding_dim]
         attn_output, _ = self.self_attn(x, x, x)
         x = x + attn_output
         x = x.transpose(0, 1)  # [batch_size, num_patches, embedding_dim]
         x = self.layer_norm(x)
 
-        x = x + self.timestep_embedding
+        x = x + timestep_embedding
         mlp_output = self.mlp(x)
         x = self.layer_norm(x)
 
@@ -58,7 +59,7 @@ class TransformerBackbone(nn.Module):
 
         self.config = config
         self.layers = nn.ModuleList([
-            TransformerBackboneLayer(timestep_embedding=self.config.layer.timestep_embedding,
+            TransformerBackboneLayer(timestep_mlp=self.config.layer.timestep_mlp,
                                      embedding_dim=self.config.layer.attention_dim,
                                      num_heads=self.config.layer.num_heads,
                                      dropout=self.config.layer.dropout)

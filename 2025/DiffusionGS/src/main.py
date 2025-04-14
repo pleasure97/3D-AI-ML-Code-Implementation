@@ -8,7 +8,9 @@ from utils.config_util import set_config
 from utils.wandb_util import update_checkpoint_path
 from lightning.pytorch.loggers.wandb import WandbLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from src.utils.step_tracker import StepTracker
 from lightning.pytorch import Trainer
+from model.model import DiffusionGS
 from dataset.dataloader import DataModule
 
 @hydra.main(version_base=None, config_path="../config", config_name="main")
@@ -54,7 +56,8 @@ def train(config_dict: DictConfig):
     # Load Checkpoint Path if exists
     checkpoint_path = update_checkpoint_path(config.checkpoint.load, config.wandb)
 
-    # May need Step Tracker
+    # Step Tracker
+    step_tracker = StepTracker()
 
     # Trainer
     trainer = Trainer(
@@ -79,7 +82,7 @@ def train(config_dict: DictConfig):
         get_losses(config.loss),
         step_tracker)
 
-    data_module = DataModule(config.dataset, config.dataloader, None, global_rank=trainer.global_rank)
+    data_module = DataModule(config.dataset, config.dataloader, step_tracker, global_rank=trainer.global_rank)
 
     if config.mode == "train":
         trainer.fit(diffusion_gs, datamodule=data_module, ckpt_path=checkpoint_path)
