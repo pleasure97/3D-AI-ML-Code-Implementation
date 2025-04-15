@@ -76,17 +76,20 @@ class DiffusionGS(LightningModule):
         _, _, _, height, width = batch["target"]["image"].shape
 
         # TODO - Run the model
-        for timestep in (self.train_config.timesteps):
+        for timestep in reversed(range(self.train_config.timesteps)):
+            timestep_mlp_output = self.timestep_mlp(timestep)
             transformer_backbone_input = self.patch_mlp(batch["source"]) + self.positional_embedding
-            self.transformer_backbone(transformer_backbone_input, timestep)
-
-            GaussianRasterizer()
+            transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep)
+            decoder_output = self.gaussian_decoder(timestep_mlp_output, transformer_backbone_output)
 
             # TODO - Compute the metrics
 
             # TODO - Compute the loss
 
             # TODO - Tell the dataloader process about the current step.
+
+            GaussianRasterizer(decoder_output)
+
 
         return total_loss
 

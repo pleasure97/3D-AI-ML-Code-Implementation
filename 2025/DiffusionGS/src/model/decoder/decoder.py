@@ -1,68 +1,80 @@
 from dataclasses import dataclass
 import torch
 import torch.nn as nn
-from ..types import Gaussians
+from src.model.types import Gaussians
+from src.model.denoiser.embedding.timestep_embedding import TimestepMLP, TimestepMLPConfig
+from src.utils.geometry_util import make_rotation_matrix, multiply_scaling_rotation
 
 
 @dataclass
 class GaussianDecoderConfig:
     u_near: float
     u_far: float
-    d_int: int
-    d_hidden: int
+    input_dim: int
+    hidden_dim: int
     weight: float
-    d_out: int
+    num_points: int
+    out_dim: int
+    timestep_mlp: TimestepMLP[TimestepMLPConfig]
 
 
-class GaussianDecoder(nn.Module):
-    def __init__(self, transformer_output_tensor: torch.Tensor, u_near: float, u_far: float,
-                 k: int=100, input_dim: int=768, hidden_dim: int=768, output_dim: int=14, weight: float=0.5):
+class GaussianDecoder(nn.Module, GaussianDecoderConfig):
+    def __init__(self, config: GaussianDecoderConfig):
         super().__init__()
 
-        self.transformer_output_tensor = transformer_output_tensor
+        self.config = config
 
-        self.u_near = torch.tensor(u_near, dtype=torch.float32)
-        self.u_far = torch.tensor(u_far, dtype=torch.float32)
+        self.u_near = torch.tensor(self.config.u_near, dtype=torch.float32)
+        self.u_far = torch.tensor(self.config.u_far, dtype=torch.float32)
 
-        self.k = k
+        self.num_points = self.config.num_points
 
         self.mlp1 = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
+            nn.Linear(self.config.input_dim, self.config.hidden_dim),
             nn.ReLU())
 
         self.mlp2 = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(self.config.hidden_dim, self.config.hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim))
+            nn.Linear(self.config.hidden_dim, self.config.output_dim))
 
         # weight to control center
-        self.weight = torch.full((k,), weight, dtype=torch.float32)
+        self.weight = torch.full((self.num_points,), self.config.weight, dtype=torch.float32)
 
-    def forward(self, x) -> Gaussians:
+    def forward(self, x, transformer_output) -> Gaussians:
         output1 = self.mlp1(x)
-
-        output1 = output1 + self.transformer_output_tensor.mean(dim=1, keepdim=True)
+        output1 = output1 + transformer_output.mean(dim=1, keepdim=True)
 
         output2 = self.mlp2(output1)
 
         # Positions are clipped to [-1, 1]^3
-        position = torch.tanh(output2[:, :, :3])
+        positions = torch.tanh(output2[:, :, :3])
 
         # Depth Transition
         depth = self.weight * self.u_near + (1 - self.weight) * self.u_far
-        depth = depth.view(1, self.k, 1)
-        position[:, :, 2:3] = depth
+        depth = depth.view(1, self.num_points, 1)
+        positions[:, :, 2:3] = depth
 
         # Color is in [0, 1]
-        color = torch.sigmoid(output2[:, :, 3:7])
+        colors = torch.sigmoid(output2[:, :, 3:6])
 
         # Scale > 0
-        scale = torch.exp(output2[:, :, 7:10])
+        scale = torch.exp(output2[:, :, 6:9])
 
         # Rotation
-        rotation = output2[:, :, 10:13]
+        quaternion = output2[:, :, 9:13]
+
+        # Adjust dimension to fit multiply_scaling_rotation()
+        batch, num_points, _ = scale.shape
+        scale = scale.view(batch * num_points, 3)
+        quaternion = quaternion.view(batch * num_points, 4)
+
+        scaling_rotation_matrix = multiply_scaling_rotation(scale, quaternion)
+        scaling_rotation_matrix = scaling_rotation_matrix.view(batch, num_points, 3, 3)
+
+        covariances = torch.matmul(scaling_rotation_matrix, scaling_rotation_matrix.tranpose(-1, -2))
 
         # Opacity
-        opacity = torch.sigmoid(output2[:, :, 13:14])
+        opacities = torch.sigmoid(output2[:, :, 9:10]).squeeze(-1)
 
-        return Gaussians(position, rotation, )
+        return Gaussians(positions, covariances, colors, opacities)
