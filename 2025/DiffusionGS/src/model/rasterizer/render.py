@@ -1,8 +1,9 @@
-from dataclasses import dataclass
 from fast_gauss import GaussianRasterizationSettings, GaussianRasterizer
 from jaxtyping import Float
 from torch import Tensor
-from src.utils.geometry_util import get_fov
+import torch
+from src.utils.geometry_util import get_fov, make_projection_matrix
+
 
 def render(
         extrinsics: Float[Tensor, "batch 4 4"],
@@ -16,7 +17,6 @@ def render(
         gaussian_covariances: Float[Tensor, "batch gaussian 3 sh_degree"],
         gaussian_opacities: Float[Tensor, "batch gaussian"],
 ) -> Float[Tensor, "batch 3 height width"]:
-
     batch_size, _, _ = extrinsics.shape
     height, width = image_shape
 
@@ -24,20 +24,19 @@ def render(
     tan_fov_x = (0.5 * fov_x).tan()
     tan_fov_y = (0.5 * fov_y).tan()
 
-    # TODO - make_projection_matrix
-    projection_matrix = make_projection_matrix(intrinsics, near, far, image_shape)
+    projection_matrix = make_projection_matrix(near, far, tan_fov_x, tan_fov_y)
 
     camera_pose = extrinsics[:, :3, 3]
 
-    # TODO - sh_degree
-    sh_degree = gaussian_covariances.shape[-1]
+    # TODO - sh_degree, shs, scale_modifier, prefiltered, debug (Maybe Use Config dataclass)
+    sh_degree = 3
 
-    # TODO - scale_modifier, prefiltered, debug (Maybe Use Config dataclass)
-
-    # TODO - make means2D
-    means2D = project_means(gaussian_means, extrinsics, projection_matrix, image_shape)
-
-    # TODO - shs, spherical harmonics
+    # +0 means to connect computational graph and prevent in-place operation
+    means2D = torch.zeros_like(gaussian_means, dtype=gaussian_means.dtype, requires_grad=True, device="cuda") + 0
+    try:
+        means2D.retain_grad()
+    except:
+        pass
 
     settings = GaussianRasterizationSettings(
         image_height=height,
@@ -54,8 +53,6 @@ def render(
         debug=False
     )
 
-
-
     rasterizer = GaussianRasterizer(settings)
     image, radii = rasterizer(
         means3D=gaussian_means,
@@ -63,6 +60,6 @@ def render(
         shs=None,
         colors_precomp=colors,
         opacities=gaussian_opacities,
-        cov3D_precomp=gaussian_covariances,)
+        cov3D_precomp=gaussian_covariances, )
 
     return image

@@ -160,3 +160,23 @@ def multiply_scaling_rotation(scale, quaternion):
     multiplied_matrix = rotation_matrix @ scaling_matrix
 
     return multiplied_matrix
+
+def make_projection_matrix(near, far, tan_fov_x, tan_fov_y):
+    top = tan_fov_x * near
+    bottom = -top
+    right = tan_fov_y * near
+    left = -right
+
+    projection_matrix = torch.zeros(4, 4)
+
+    sign = 1.
+
+    projection_matrix[0, 0] = 2. * near / (right - left)
+    projection_matrix[1, 1] = 2. * near / (top - bottom)
+    projection_matrix[0, 2] = (right + left) / (right - left)
+    projection_matrix[1, 2] = (top + bottom) / (top - bottom)
+    projection_matrix[3, 2] = sign
+    projection_matrix[2, 2] = sign * far / (far - near)
+    projection_matrix[2, 3] = -(far * near) / (far - near)
+
+    return projection_matrix

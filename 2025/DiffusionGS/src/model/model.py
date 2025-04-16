@@ -3,7 +3,8 @@ from lightning.pytorch import LightningModule
 from lightning.pytorch.loggers.wandb import WandbLogger
 from typing import Optional
 from pathlib import Path
-from torch import nn
+from torch import nn, Tensor
+import torch
 from denoiser.embedding.timestep_embedding import TimestepMLP
 from denoiser.embedding.patch_embedding import PatchMLP
 from denoiser.embedding.positional_embedding import PositionalEmbedding
@@ -13,9 +14,10 @@ from src.utils.step_tracker import StepTracker
 from ..loss.loss import Loss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
-from fast_gauss import GaussianRasterizationSettings, GaussianRasterizer
 from lightning.pytorch.utilities import rank_zero_only
 from src.dataset.types import BatchedExample
+from src.model.rasterizer.render import render
+from src.evaluation.metrics import get_psnr
 
 @dataclass
 class OptimizerConfig:
@@ -67,12 +69,18 @@ class DiffusionGS(LightningModule):
         self.timestep_mlp = timestep_mlp
         self.patch_mlp = patch_mlp
         self.positional_embedding = positional_embedding
+        self.preprocess = None
         self.transformer_backbone = transformer_backbone
         self.gaussian_decoder = gaussian_decoder
         self.losses = nn.ModuleList(losses)
 
     def training_step(self, batch, batch_index):
+        current_step = self.global_step
+        warmup_steps = self.optimizer_config.warmup_steps
+
+        # TODO - Preprocess the BatchedExample
         batch: BatchedExample = self.(batch)
+        background_color = Tensor([0, 0, 0])  # TODO - if not dataset.white_background else [1, 1, 1]
         _, _, _, height, width = batch["target"]["image"].shape
 
         # TODO - Run the model
@@ -80,15 +88,53 @@ class DiffusionGS(LightningModule):
             timestep_mlp_output = self.timestep_mlp(timestep)
             transformer_backbone_input = self.patch_mlp(batch["source"]) + self.positional_embedding
             transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep)
-            decoder_output = self.gaussian_decoder(timestep_mlp_output, transformer_backbone_output)
+            positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output, transformer_backbone_output)
+
+            rasterized_image = render(batch["target"]["extrinsics"],
+                           batch["target"]["intrinsics"],
+                           batch["target"]["near"],
+                           batch["target"]["far"],
+                           batch["target"]["image"].shape,
+                           background_color,
+                           colors,
+                           positions,
+                           covariances,
+                           opacities)
 
             # TODO - Compute the metrics
+            psnr = get_psnr(batch["target"]["image"], rasterized_image)
+            self.log("train/psnr", psnr)
 
-            # TODO - Compute the loss
+        # TODO - Compute the loss
+        total_loss = 0
+
+        for loss in self.losses:
+            # TODO - Denoising Loss
+            if loss.name == "denoising_loss":
+                denoising_loss =
+                denoising_loss_value =
+                self.log(f"loss/{denoising_loss}", denoising_loss_value)
+
+            # TODO - Novel View Loss
+            else if loss.name == "novel_view_loss":
+                novel_view_loss =
+                novel_view_loss_value =
+                self.log(f"loss/{novel_view_loss}", novel_view_loss_value)
+
+            # TODO - Point Distribution Loss
+            else if loss.name == "point_distribution_loss":
+                point_distribution_loss =
+                point_distribution_loss_value =
+                self.log(f"loss/{point_distribution_loss}", point_distribution_loss_value)
+
+        total_loss = torch.where(current_step > warmup_steps,
+                                 denoising_loss_value + novel_view_loss_value,
+                                 point_distribution_loss_value * torch.where(is_object, 1, 0))
+
+
+
 
             # TODO - Tell the dataloader process about the current step.
-
-            GaussianRasterizer(decoder_output)
 
 
         return total_loss
