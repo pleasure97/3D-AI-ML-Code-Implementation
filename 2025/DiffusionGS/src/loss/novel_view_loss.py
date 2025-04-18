@@ -1,21 +1,17 @@
 from dataclasses import dataclass
-from .loss import Loss
-from ..model.types import RasterizedOutput
-from ..dataset.types import BatchedExample
+from src.loss import Loss
+from src.model.types import Gaussians
+from src.dataset.types import BatchedExample
 from jaxtyping import Float
 from torch import Tensor
 
 
 @dataclass
 class NovelViewLossConfig:
-    pass
+    weight: float
 
-@dataclass
-class NovelViewLossConfigWrapper:
-    A: NovelViewLossConfig
-
-
-class NovelViewLoss(Loss[NovelViewLossConfig, NovelViewLossConfigWrapper]):
-    def forward(self, prediction: RasterizedOutput, batch: BatchedExample) -> Float[Tensor]:
-        pass
+class NovelViewLoss(Loss[NovelViewLossConfig]):
+    def forward(self, prediction: Gaussians, batch: BatchedExample) -> Float[Tensor]:
+        delta = prediction.colors - batch["target"]["image"]
+        return self.config.weight * (delta ** 2).mean()
 

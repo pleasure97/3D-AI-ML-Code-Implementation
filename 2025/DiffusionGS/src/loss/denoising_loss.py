@@ -1,29 +1,27 @@
 from dataclasses import dataclass
-from .loss import Loss
-from ..model.types import RasterizedOutput
-from ..dataset.types import BatchedExample
+from src.loss import Loss
+from src.model.types import Gaussians
+from src.dataset.types import BatchedExample
 from jaxtyping import Float
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 import torchvision
 
+
 @dataclass
 class DenoisingLossConfig:
-  pass
+    weight: float
 
-@dataclass
-class DenoisingLossConfigWrapper:
-  denoising_loss: DenoisingLossConfig
 
-class DenoisingLoss(Loss[DenoisingLossConfig, DenoisingLossConfigWrapper]):
-    def __init__(self, config: DenoisingLossConfigWrapper) -> None:
+class DenoisingLoss(Loss[DenoisingLossConfig]):
+    def __init__(self, config: DenoisingLossConfig) -> None:
         super().__init__(config)
 
         self.vgg = VGGLoss()
 
     def forward(self,
-                prediction: RasterizedOutput,
+                prediction: Gaussians,
                 batch: BatchedExample,
                 global_step: int) -> Float[Tensor]:
         image = batch["target"]["image"]

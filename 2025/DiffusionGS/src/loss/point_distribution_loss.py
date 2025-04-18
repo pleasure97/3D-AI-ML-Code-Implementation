@@ -1,47 +1,34 @@
 from dataclasses import dataclass
 import torch
 from src.loss import Loss
-from src.model.types import RasterizedOutput
-from src.model.decoder.decoder import GaussianDecoder
-from src.dataset.types import BatchedExample
 from jaxtyping import Float
 from torch import Tensor
 
 
 @dataclass
 class PointDistributionLossConfig:
-    pass
+    sigma_0: float
 
 
-@dataclass
-class PointDistributionLossConfigWrapper:
-    A: PointDistributionLossConfig
+class PointDistributionLoss(Loss[PointDistributionLossConfig]):
+    def forward(self,
+                weight_u: float, u_near: float, u_far: float,
+                rays_o: Float[Tensor], rays_d: Float[Tensor], timesteps: int) -> Float[Tensor]:
+        l_ts = []
+        for timestep in range(timesteps):
+            u_t = weight_u * u_near + (1 - weight_u) * u_far
+            l_t = torch.append(u_t * rays_d[timestep])
+            l_ts.append(l_t)
 
+        l_t_tensor = torch.stack(l_ts)
+        mean_l_t = torch.mean(l_t_tensor)
+        var_l_t = torch.var(l_t_tensor, unbiased=False)
+        std_l_t = torch.sqrt(var_l_t)
 
-class PointDistributionLoss(Loss[PointDistributionLossConfig, PointDistributionLossConfigWrapper]):
-    def forward(self, prediction: RasterizedOutput, batch: BatchedExample) -> Float[Tensor]:
-        pass
+        abs_rays_o = [torch.abs(ray_o) for ray_o in rays_o]
+        mean_abs_o = torch.mean(torch.stack(abs_rays_o))
 
+        point_distribution_loss = torch.mean(l_t_tensor -
+                                             ((l_t_tensor - mean_l_t) / std_l_t * self.config.sigma_0 + abs_rays_o))
 
-def get_point_distribution_loss(decoder: GaussianDecoder, rays_o, rays_d, timesteps: int, sigma_0: float = 0.5):
-    assert isinstance(decoder, GaussianDecoder), f'Expected Type is GaussianDecoder, but Current Type is {decoder.type}'
-
-    l_t_list = []
-
-    for timestep in range(timesteps):
-        u_t = decoder.weight[timestep] * decoder.u_near + (1 - decoder.weight[timestep]) * decoder.u_far
-        l_t = torch.abs(u_t * rays_d[timesteps])
-        l_t_list.append(l_t)
-
-    l_t_tensor = torch.stack(l_t_list)
-
-    mean_l_t = torch.mean(l_t_tensor)
-    var_l_t = torch.var(l_t_tensor, unbiased=False)
-    std_l_t = torch.sqrt(var_l_t)
-
-    abs_o_list = [torch.abs(ray_o) for ray_o in rays_o]
-    mean_abs_o = torch.mean(torch.stack(abs_o_list))
-
-    point_distribution_loss = torch.mean(l_t_tensor - ((l_t_tensor - mean_l_t) / std_l_t * sigma_0 + mean_abs_o))
-
-    return point_distribution_loss
+        return point_distribution_loss

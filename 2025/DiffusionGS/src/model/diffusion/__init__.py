@@ -1,53 +1,71 @@
+from dataclasses import dataclass
 from diffusers import DiffusionPipeline, DDIMScheduler
+from torch import Tensor
 import torch
 import torchvision.transforms as transforms
 from pathlib import Path
 from PIL import Image
 import matplotlib.pyplot as plt
+from jaxtyping import Float
 
-class NoisyImageGenerator:
-    def __init__(self, model_id="ptx0/pseudo-journey-v2", device="cuda", dtype=torch.float16):
+
+@dataclass
+class DiffusionGeneratorConfig:
+    model_id: str  # "ptx0/pseudo-journey-v2"
+    timestep_spacing: str  # "trailing"
+    total_timesteps: int  # 101
+    num_timesteps: int  # 1
+
+
+class DiffusionGenerator(DiffusionGeneratorConfig):
+    def __init__(self, config: DiffusionGeneratorConfig, device="cuda", dtype=torch.float16):
+        self.config = config
+
         self.device = device
         self.dtype = dtype
-        self.pipe = DiffusionPipeline.from_pretrained(model_id, dtype=dtype).to(device)
+        self.transform = transforms.Compose([transforms.ToTensor()])
+
+        self.pipe = DiffusionPipeline.from_pretrained(self.config.model_id, dtype=dtype).to(device)
         self.scheduler = DDIMScheduler.from_config(
             self.pipe.scheduler.config,
             rescale_betas_zero_snr=True,
-            timestep_spacing="trailing")
-        self.transform = transforms.Compose([transforms.ToTensor()])
+            timestep_spacing=self.config.timestep_spacing)
 
-    def generate(self, image_path: Path, num_timesteps: int):
+        self.total_timesteps = self.config.total_timesteps
+        self.num_timesteps = self.config.num_timesteps
+
+    def generate(self, source_image: Float[Tensor]) -> list[Float[Tensor]]:
         # Load and transform image
-        timesteps = torch.arange(1, 101, num_timesteps)
-        image = Image.open(image_path).convert("RGB")
+        timesteps = torch.arange(1, self.total_timesteps, self.num_timesteps)
+        image = Image.open(source_image).convert("RGB")
         original_sample = self.transform(image).unsqueeze(0).to(self.device, dtype=self.dtype)
 
         # Generate noise
         noise = torch.randn_like(original_sample, dypte=self.dtype, device=self.device)
 
         # Apply noise at specified timesteps
-        noisy_samples = []
+        noisy_images = []
         for timestep in timesteps:
-            noisy_sample = self.scheduler.add_noise(original_sample, noise, timestep.unsqueeze(0))
-            noisy_samples.append(noisy_sample)
+            noisy_image = self.scheduler.add_noise(original_sample, noise, timestep.unsqueeze(0))
+            noisy_images.append(noisy_image)
 
-        return original_sample, noisy_samples
+        return noisy_images
 
     @staticmethod
-    def visualize(self, original_sample, noisy_samples, num_timesteps):
-        timesteps = torch.arange(1, 101, num_timesteps)
+    def visualize(self, source_image: Float[Tensor], noisy_images: list[Float[Tensor]]):
+        timesteps = torch.arange(1, self.total_timesteps, self.num_timesteps)
 
         to_pil = transforms.ToPILImage()
-        num_images = len(noisy_samples) + 1
+        num_images = len(noisy_images) + 1
         fig, axs = plt.subplots(1, num_images, figsize=(3 * num_images, 3))
 
         # Original image
-        axs[0].imshow(to_pil(original_sample.squeeze(0).float().cpu().clamp(0, 1)))
+        axs[0].imshow(to_pil(source_image.squeeze(0).float().cpu().clamp(0, 1)))
         axs[0].set_title("Original")
         axs[0].axis("off")
 
         # Noisy images
-        for i, (sample, t) in enumerate(zip(noisy_samples, timesteps)):
+        for i, (sample, t) in enumerate(zip(noisy_images, timesteps)):
             axs[i + 1].imshow(to_pil(sample.squeeze(0).float().cpu().clamp(0, 1)))
             axs[i + 1].set_title(f"Timestep {t.item()}")
             axs[i + 1].axis("off")

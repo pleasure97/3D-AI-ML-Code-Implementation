@@ -10,8 +10,3 @@ class Gaussians:
     colors: Float[Tensor, "batch gaussian 3"]
     opacities: Float[Tensor, "batch gaussian"]
 
-@dataclass
-class RasterizedOutput:
-    images: Float[Tensor, "batch view 3 height width"]
-    timestep: int
-
