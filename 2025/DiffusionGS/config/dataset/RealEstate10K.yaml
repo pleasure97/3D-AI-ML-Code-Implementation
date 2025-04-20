@@ -1,0 +1,8 @@
+name: RealEstate10K
+roots: [datasets/RealEstate10K]
+
+image_shape: [180, 320]
+background_color: [0., 0., 0.]
+cameras_are_circular: false
+
+max_fov: 100.

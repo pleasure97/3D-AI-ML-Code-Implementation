@@ -1,0 +1,6 @@
+name: Objaverse
+uids: [datasets/Objaverse]
+max_fov: 50.
+num_images_to_render: 32
+download_processes: 12
+image_shape: [180, 320]

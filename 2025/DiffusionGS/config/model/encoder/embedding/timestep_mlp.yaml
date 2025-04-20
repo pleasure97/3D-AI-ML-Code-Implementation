@@ -1,0 +1,3 @@
+name: timestep_mlp
+embedding: # TimestepEmbeddingConfig
+out_dim:

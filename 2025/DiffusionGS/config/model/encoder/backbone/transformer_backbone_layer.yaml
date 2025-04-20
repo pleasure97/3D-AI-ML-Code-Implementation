@@ -1,0 +1,6 @@
+name: transformer_backbone_layer
+timestep_mlp:
+attention_dim: 768
+num_heads: 12
+d_embedding: 768
+dropout:

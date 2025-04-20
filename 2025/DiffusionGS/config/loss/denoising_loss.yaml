@@ -1,1 +1,2 @@
-denoising_loss:
+name: denoising_loss
+weight: 0.8

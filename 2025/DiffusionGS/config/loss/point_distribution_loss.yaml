@@ -1,1 +1,2 @@
-point_distribution_loss:
+name: point_distribution_loss
+sigma_0: 0.5

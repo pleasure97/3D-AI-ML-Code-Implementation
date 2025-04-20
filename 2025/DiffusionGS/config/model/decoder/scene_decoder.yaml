@@ -1,9 +1,9 @@
 name: scene_decoder
-
-u_near: 0
-u_far: 500
-
-dim:
-  d_in: 768
-  d_hidden: 768
-  d_out: 14
+u_near: 0.
+u_far: 500.
+input_dim: 768
+hidden_dim: 768
+out_dim: 14
+weight:
+num_points:
+timestep_mlp: 

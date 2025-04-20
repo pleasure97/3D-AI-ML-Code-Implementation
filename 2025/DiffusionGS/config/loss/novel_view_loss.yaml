@@ -1,1 +1,2 @@
-novel_view_loss:
+name: novel_view_loss
+weight: 0.8
