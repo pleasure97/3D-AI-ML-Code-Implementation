@@ -48,10 +48,10 @@ def plucker_embedding(height, width, intrinsics, c2w, jitter=False):
 
 def reference_point_plucker_embedding(height, width, intrinsics, c2w, jitter=False):
     """Computes the reference point plucker coordinates from batched cam2world & intrinsics matrices, as well as pixel coordinates
-  H : image height
-  W : image width
-  C2W : (Batch Size, 4, 4)
+  height : image height
+  width : image width
   intrinsics : (Batch Size, 3, 3)
+  c2w : (Batch Size, 4, 4)
   """
     rays_o, rays_d = get_rays(height, width, intrinsics, c2w, jitter=jitter)  # (B, H * W, 3), (B, H * W, 3)
     o_dot_d = (rays_o * rays_d).sum(dim=-1, keepdim=True)  # (B, H * W , 1)

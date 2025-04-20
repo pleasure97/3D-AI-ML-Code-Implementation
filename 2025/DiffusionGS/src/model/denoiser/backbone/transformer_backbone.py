@@ -1,18 +1,19 @@
 from dataclasses import dataclass
 from typing import Literal
-from ..embedding.timestep_embedding import TimestepMLPConfig, TimestepMLP
+from src.model.denoiser.embedding.timestep_embedding import TimestepMLPConfig, TimestepMLP
+from src.model.denoiser.viewpoint.RPPC import reference_point_plucker_embedding
 import torch.nn as nn
 
 @dataclass
 class BackboneLayerConfig:
-    name: Literal["TransformerBackboneLayer"]
+    name: Literal["transformer_backbone_layer"]
     timestep_mlp: TimestepMLP[TimestepMLPConfig]
     attention_dim: int
     num_heads: int
     dropout: float
 @dataclass
 class BackboneConfig:
-    name: Literal["TransformerBackbone"]
+    name: Literal["transformer_backbone"]
     layer: BackboneLayerConfig
     num_layers: int
 
@@ -37,6 +38,7 @@ class TransformerBackboneLayer(nn.Module, BackboneLayerConfig):
         )
 
     def forward(self, x, timestep):
+        reference_point_plucker_embedding(height, width, intrinsics, c2w)
         # timestep_embedding : [batch_size, 1, embedding_dim]
         timestep_embedding = self.timestep_mlp(timestep)
         x = x + timestep_embedding  # [batch_size, num_patches, embedding_dim]

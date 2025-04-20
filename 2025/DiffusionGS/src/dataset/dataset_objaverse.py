@@ -1,19 +1,17 @@
 from dataclasses import dataclass
 import objaverse
-from .dataset_common import DatasetConfig
+from src.dataset.dataset_common import DatasetConfig
 from typing import Literal, List
-from pathlib import Path
 from torch.utils.data import IterableDataset
-from .types import Stage
-from ..model.denoiser.viewpoint.view_sampler import ViewSampler
+from src.dataset.types import Stage
+from src.model.denoiser.viewpoint.view_sampler import ViewSampler
 import torch
 from jaxtyping import Float, UInt8
 from torch import Tensor
 from PIL import Image
 from io import BytesIO
 import torchvision.transforms as transforms
-import json
-from .preprocessing.preprocess_utils import crop_example
+from src.dataset.preprocessing.preprocess_utils import crop_example
 
 @dataclass
 class DatasetObjaverseConfig(DatasetConfig):

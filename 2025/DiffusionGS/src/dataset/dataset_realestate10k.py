@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from .dataset_common import DatasetConfig
+from src.dataset.dataset_common import DatasetConfig
 from typing import Literal
 from pathlib import Path
 from torch.utils.data import IterableDataset
-from .types import Stage
-from ..model.denoiser.viewpoint.view_sampler import ViewSampler
+from src.dataset.types import Stage
+from src.model.denoiser.viewpoint.view_sampler import ViewSampler
 import torchvision.transforms as transforms
 import torch
 from torch import Tensor
@@ -18,7 +18,10 @@ import json
 class DatasetRealEstate10KConfig(DatasetConfig):
     name: Literal["RealEstate10K"]
     roots: list[Path]
-
+    image_shape: tuple
+    background_color: tuple
+    cameras_are_circular: bool
+    max_fov: float
 
 class DatasetRealEstate10K(IterableDataset):
     config: DatasetRealEstate10KConfig

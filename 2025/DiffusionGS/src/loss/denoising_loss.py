@@ -1,6 +1,6 @@
 from dataclasses import dataclass
+from typing import Literal
 from src.loss import Loss
-from src.model.types import Gaussians
 from src.dataset.types import BatchedExample
 from jaxtyping import Float
 import torch
@@ -11,9 +11,11 @@ import torchvision
 
 @dataclass
 class DenoisingLossConfig:
+    name: Literal["denoising_loss"]
     weight: float
 
 
+# Denoised Multi-View Images and N views when timestep is 0
 class DenoisingLoss(Loss[DenoisingLossConfig]):
     def __init__(self, config: DenoisingLossConfig) -> None:
         super().__init__(config)
@@ -21,11 +23,10 @@ class DenoisingLoss(Loss[DenoisingLossConfig]):
         self.vgg = VGGLoss()
 
     def forward(self,
-                prediction: Gaussians,
-                batch: BatchedExample,
-                global_step: int) -> Float[Tensor]:
+                batch: BatchedExample) -> Float[Tensor]:
         image = batch["target"]["image"]
 
+        nn.MSELoss() + self.config.weight *
         loss = self.vgg.forward()
 
 

@@ -1,15 +1,18 @@
 from dataclasses import dataclass
+from typing import Literal
 import torch
 import torch.nn as nn
 import math
 
 @dataclass
 class TimestepEmbeddingConfig:
+    name: Literal["timestep_embedding"]
     time_dim: int
     max_period: int
 
 @dataclass
 class TimestepMLPConfig:
+    name: Literal["timestep_mlp"]
     embedding: TimestepEmbeddingConfig
     out_dim: int
 

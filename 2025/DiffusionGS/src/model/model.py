@@ -73,7 +73,7 @@ class DiffusionGS(LightningModule):
         self.timestep_mlp = timestep_mlp
         self.patch_mlp = patch_mlp
         self.positional_embedding = positional_embedding
-        self.preprocess = None
+        self.sample = None
         self.transformer_backbone = transformer_backbone
         self.gaussian_decoder = gaussian_decoder
         self.losses = nn.ModuleList(losses)
@@ -83,35 +83,37 @@ class DiffusionGS(LightningModule):
         warmup_steps = self.optimizer_config.warmup_steps
 
         # TODO - Preprocess the BatchedExample
-        batch: BatchedExample = self.(batch)
+        samples: list[BatchedExample] = self.sample(batch)
         background_color = Tensor([0, 0, 0])  # TODO - if not dataset.white_background else [1, 1, 1]
         _, _, _, height, width = batch["target"]["image"].shape
 
         # TODO - Run the model
+        noisy_images = []
+        rasterized_images = []
         noisy_images = self.diffusion_generator.generate(batch)
         for timestep in reversed(range(self.diffusion_generator.total_timesteps, self.diffusion_generator.num_timesteps)):
+            for sample in samples:
+                noisy_image = noisy_images[timestep]
 
-            noisy_image = noisy_images[timestep]
+                timestep_mlp_output = self.timestep_mlp(timestep)
+                transformer_backbone_input = self.patch_mlp(sample["target"]) + self.positional_embedding
+                transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep)
+                positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output, transformer_backbone_output)
 
-            timestep_mlp_output = self.timestep_mlp(timestep)
-            transformer_backbone_input = self.patch_mlp(batch["source"]) + self.positional_embedding
-            transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep)
-            positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output, transformer_backbone_output)
+                rasterized_image = render(sample["target"]["extrinsics"],
+                               sample["target"]["intrinsics"],
+                               sample["target"]["near"],
+                               sample["target"]["far"],
+                               sample["target"]["image"].shape,
+                               background_color,
+                               colors,
+                               positions,
+                               covariances,
+                               opacities)
 
-            rasterized_image = render(batch["target"]["extrinsics"],
-                           batch["target"]["intrinsics"],
-                           batch["target"]["near"],
-                           batch["target"]["far"],
-                           batch["target"]["image"].shape,
-                           background_color,
-                           colors,
-                           positions,
-                           covariances,
-                           opacities)
-
-            # TODO - Compute the metrics
-            psnr = get_psnr(batch["target"]["image"], rasterized_image)
-            self.log("train/psnr", psnr)
+                # TODO - Compute the metrics
+                psnr = get_psnr(batch["target"]["image"], rasterized_image)
+                self.log("train/psnr", psnr)
 
         # TODO - Compute the loss
         total_loss = 0

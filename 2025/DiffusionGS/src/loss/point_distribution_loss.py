@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 import torch
 from src.loss import Loss
 from jaxtyping import Float
@@ -7,6 +8,7 @@ from torch import Tensor
 
 @dataclass
 class PointDistributionLossConfig:
+    name: Literal["point_distribution_loss"]
     sigma_0: float
 
 
@@ -29,6 +31,6 @@ class PointDistributionLoss(Loss[PointDistributionLossConfig]):
         mean_abs_o = torch.mean(torch.stack(abs_rays_o))
 
         point_distribution_loss = torch.mean(l_t_tensor -
-                                             ((l_t_tensor - mean_l_t) / std_l_t * self.config.sigma_0 + abs_rays_o))
+                                             ((l_t_tensor - mean_l_t) / std_l_t * self.config.sigma_0 + mean_abs_o))
 
         return point_distribution_loss

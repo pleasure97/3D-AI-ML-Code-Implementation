@@ -3,7 +3,6 @@ from diffusers import DiffusionPipeline, DDIMScheduler
 from torch import Tensor
 import torch
 import torchvision.transforms as transforms
-from pathlib import Path
 from PIL import Image
 import matplotlib.pyplot as plt
 from jaxtyping import Float
@@ -29,7 +28,8 @@ class DiffusionGenerator(DiffusionGeneratorConfig):
         self.scheduler = DDIMScheduler.from_config(
             self.pipe.scheduler.config,
             rescale_betas_zero_snr=True,
-            timestep_spacing=self.config.timestep_spacing)
+            timestep_spacing=self.config.timestep_spacing,
+            prediction_type="sample")  # prediction type - x_0 prediction instead of epsilon prediction
 
         self.total_timesteps = self.config.total_timesteps
         self.num_timesteps = self.config.num_timesteps

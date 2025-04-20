@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+from typing import Literal
 import torch
 from torch import nn
 
 @dataclass
 class PositionalEmbeddingConfig:
+    name: Literal["positional_embedding"]
     num_patches: int
     embedding_dim: int
 

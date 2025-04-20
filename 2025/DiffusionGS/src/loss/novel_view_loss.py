@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 from src.loss import Loss
 from src.model.types import Gaussians
 from src.dataset.types import BatchedExample
@@ -8,6 +9,7 @@ from torch import Tensor
 
 @dataclass
 class NovelViewLossConfig:
+    name: Literal["novel_view_loss"]
     weight: float
 
 class NovelViewLoss(Loss[NovelViewLossConfig]):

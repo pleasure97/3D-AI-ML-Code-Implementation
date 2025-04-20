@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 import torch
 import torch.nn as nn
 from src.model.types import Gaussians
@@ -8,13 +9,14 @@ from src.utils.geometry_util import make_rotation_matrix, multiply_scaling_rotat
 
 @dataclass
 class GaussianDecoderConfig:
+    name: Literal["object_decoder"] | Literal["scene_decoder"]
     u_near: float
     u_far: float
     input_dim: int
     hidden_dim: int
+    out_dim: int
     weight: float
     num_points: int
-    out_dim: int
     timestep_mlp: TimestepMLP[TimestepMLPConfig]
 
 
