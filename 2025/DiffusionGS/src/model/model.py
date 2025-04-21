@@ -12,7 +12,9 @@ from denoiser.embedding.positional_embedding import PositionalEmbedding
 from denoiser.backbone.transformer_backbone import TransformerBackbone
 from decoder.decoder import GaussianDecoder
 from src.utils.step_tracker import StepTracker
-from ..loss.loss import Loss
+from src.loss.denoising_loss import DenoisingLoss
+from src.loss.point_distribution_loss import PointDistributionLoss
+from src.loss.novel_view_loss import NovelViewLoss
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
 from lightning.pytorch.utilities import rank_zero_only
@@ -121,19 +123,19 @@ class DiffusionGS(LightningModule):
         for loss in self.losses:
             # TODO - Denoising Loss
             if loss.name == "DenoisingLoss":
-                denoising_loss =
+                denoising_loss = DenoisingLoss()
                 denoising_loss_value =
                 self.log(f"loss/{denoising_loss}", denoising_loss_value)
 
             # TODO - Novel View Loss
             else if loss.name == "NovelViewLoss":
-                novel_view_loss =
+                novel_view_loss = NovelViewLoss()
                 novel_view_loss_value =
                 self.log(f"loss/{novel_view_loss}", novel_view_loss_value)
 
             # TODO - Point Distribution Loss
             else if loss.name == "PointDistributionLoss":
-                point_distribution_loss =
+                point_distribution_loss = PointDistributionLoss()
                 point_distribution_loss_value =
                 self.log(f"loss/{point_distribution_loss}", point_distribution_loss_value)
 
@@ -142,17 +144,28 @@ class DiffusionGS(LightningModule):
                                  point_distribution_loss_value * torch.where(is_object, 1, 0))
 
 
+        if self.global_rank == 0:
+            print(f"train step {self.global_step}; "
+                  f"scene = {batch['scene']}; "
+                  f"source = {batch['source']['index'].tolist()}"
+                  f"loss = {total_loss:.6f}")
 
 
-            # TODO - Tell the dataloader process about the current step.
-
+        if self.step_tracker is not None:
+            self.step_tracker.set_step(self.global_step)
 
         return total_loss
 
 
     @rank_zero_only
     def validation_step(self, batch, batch_index):
-        pass
+        batch: BatchedExample = self.sample(batch)
+
+        if self.global_rank == 0:
+            print(
+                f"validation step {self.global_step}; "
+                f"scene = {batch['scene']}; "
+                f"source = {batch['source']['index'].tolist()}")
 
     def test_step(self, batch, batch_index):
         pass

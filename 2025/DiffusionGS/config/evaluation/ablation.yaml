@@ -1,0 +1,16 @@
+evaluation:
+  methods:
+    - name: Ours
+      key: Ours
+      path:
+    - name: No Point Distribution Loss
+      key: no_point_distribution_loss
+      path:
+    - name: No Mixed Training
+      key: no_mixed_training
+      path:
+    - name: No RPPC
+      key: no_rppc
+      path:
+
+output_metrics_path:

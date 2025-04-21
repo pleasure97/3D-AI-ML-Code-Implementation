@@ -9,5 +9,10 @@ processes = multiprocessing.cpu_count()
 print(f"the number of processes : {processes}")
 objaverse_objects = objaverse.load_objects(uids=uids, download_processes=processes)
 
-
+# objaverse
+# - streaming download
+# - preprocess (center and scale)
+# - sample random viewpoint (N samples)
+#   > View Sampler
+#   > RPPC
 
