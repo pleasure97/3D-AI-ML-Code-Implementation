@@ -17,6 +17,7 @@ def rescale(
     image_new = Image.fromarray(image_new)
     image_new = image_new.resize((width, height), Image.LANCZOS)
     image_new = np.array(image_new) / 255
+    # TODO - Check Device
     image_new = torch.tensor(image_new, dtype=image.dtype, device=image.device)
     image_new = rearrange(image_new, "h w c -> c h w")
     return image_new

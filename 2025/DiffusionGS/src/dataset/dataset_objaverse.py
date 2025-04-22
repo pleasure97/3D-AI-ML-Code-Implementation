@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import objaverse
 from src.dataset.dataset_common import DatasetConfig
-from typing import Literal, List
+from typing import Literal, List, Set
 from torch.utils.data import IterableDataset
 from src.dataset.types import Stage
 from src.model.denoiser.viewpoint.view_sampler import ViewSampler
@@ -12,13 +12,15 @@ from PIL import Image
 from io import BytesIO
 import torchvision.transforms as transforms
 from src.dataset.preprocessing.preprocess_utils import crop_example
+import os
+import json
 
 @dataclass
 class DatasetObjaverseConfig(DatasetConfig):
     name: Literal["Objaverse"]
+    root: str
     uids: List[str]
     max_fov: float
-    num_images_to_render: int
     download_processes: int
     image_shape: tuple
 
@@ -37,15 +39,31 @@ class DatasetObjaverse(IterableDataset):
         self.stage = stage
         self.view_sampler = view_sampler
 
-        self.chunks = objaverse.load_objects(uids=self.config.uids, download_processes=self.config.download_processes)
+        # Load downloaded uids
+        self.downloaded_uids: Set[str] = self._load_downloaded_uids()
+        # Prepare pending uids
+        self.pending_uids = [uid for uid in self.config.uids if uid not in self.downloaded_uids]
 
-        if self.stage in ("train", "val"):
-            self.chunks = self.shuffle(self.chunks)
+        self.streaming_downloader = self._streaming_download()
 
-    @staticmethod
-    def shuffle(self, chunks: list) -> list:
-        indices = torch.randperm(len(chunks))
-        return [chunks[index] for index in indices]
+    def _load_downloaded_uids(self) -> Set[str]:
+        if os.path.exists(self.config.root):
+            with open(self.config.root, "r") as f:
+                return set(json.load(f))
+        return set()
+
+    def _save_downloaded_uids(self, uid: str):
+        self.downloaded_uids.add(uid)
+        with open(self.config.root, "w") as f:
+            json.dump(list(self.downloaded_uids), f)
+
+    def _streaming_download(self):
+        for objaverse_object in objaverse.load_objects(uids=self.pending_uids,
+                                                       download_processes=self.config.download_processes):
+            uid = objaverse_object["uid"]
+            path = objaverse_object["path"]
+            self._save_downloaded_uids(uid)
+            yield path
 
     @staticmethod
     def convert_poses(self, poses: Float[Tensor, "batch 18"]
@@ -73,24 +91,27 @@ class DatasetObjaverse(IterableDataset):
         return torch.stack(outputs)
 
     def __iter__(self):
-        if self.stage in ("train", "val"):
-            self.chunks = self.shuffle(self.chunks)
-
         worker_info = torch.utils.data.get_worker_info()
 
-        if self.stage == "test" and worker_info is not None:
-            self.chunks = [chunk for chunk_index, chunk in enumerate(self.chunks)
-                           if chunk_index % worker_info.num_workers == worker_info.id]
+        if worker_info is not None:
+            num_workers, worker_id = worker_info.num_workers, worker_info.id
+            self._streaming_download = (functor for i, functor in enumerate(self._streaming_download)
+                                        if i % num_workers == worker_id)
 
-        for chunk_path in self.chunks:
-            chunk = torch.load(chunk_path)
+        for chunk_path in self._streaming_download:
+            try:
+                chunk = torch.load(chunk_path)
+            except Exception as e:
+                print(f"Failed to load {chunk_path}: {e}")
+                continue
+
             if self.stage in ("train", "val"):
-                chunk = self.shuffle(chunk)
-            for example in chunk:
-                extrinsics, intrinsics = self.convert_poses(example["cameras"])
-                scene = example["key"]
+                chunk = [chunk[i] for i in torch.randperm(len(chunk))]
 
-                source_indices, target_indices = self.view_sampler.sample(scene, extrinsics, intrinsics)
+            for ch in chunk:
+                extrinsics, intrinsics = self.convert_poses(ch["cameras"])
+                scene = ch["key"]
+                source_indices, target_indices = self.view_sampler.sample(extrinsics)
 
                 source_images = [example["images"][source_index.item()] for source_index in source_indices]
                 target_images = [example["images"][target_index.item()] for target_index in target_indices]
@@ -118,5 +139,5 @@ class DatasetObjaverse(IterableDataset):
                 yield crop_example(example, tuple(self.config.image_shape))
 
     def __len__(self) -> int:
-        return len(self.chunks)
+        return len(self.pending_uids)
 
