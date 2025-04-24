@@ -12,9 +12,7 @@ from denoiser.embedding.positional_embedding import PositionalEmbedding
 from denoiser.backbone.transformer_backbone import TransformerBackbone
 from decoder.decoder import GaussianDecoder
 from src.utils.step_tracker import StepTracker
-from src.loss.denoising_loss import DenoisingLoss
-from src.loss.point_distribution_loss import PointDistributionLoss
-from src.loss.novel_view_loss import NovelViewLoss
+from src.loss import LossesConfig
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
 from lightning.pytorch.utilities import rank_zero_only
@@ -47,7 +45,7 @@ class DiffusionGS(LightningModule):
     positional_embedding: PositionalEmbedding
     transformer_backbone: TransformerBackbone
     gaussian_decoder: GaussianDecoder
-    losses: nn.ModuleList
+    losses: LossesConfig
     optimizer_config: OptimizerConfig
     train_config: TrainConfig
     test_config: TestConfig

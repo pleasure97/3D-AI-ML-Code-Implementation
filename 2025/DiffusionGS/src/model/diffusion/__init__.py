@@ -34,7 +34,8 @@ class DiffusionGenerator(DiffusionGeneratorConfig):
         self.total_timesteps = self.config.total_timesteps
         self.num_timesteps = self.config.num_timesteps
 
-    def generate(self, source_image: Float[Tensor]) -> list[Float[Tensor]]:
+    def generate(self, source_image: Float[Tensor, "batch channel height width"]) \
+            -> list[Float[Tensor, "batch channel height width"]]:
         # Load and transform image
         timesteps = torch.arange(1, self.total_timesteps, self.num_timesteps)
         image = Image.open(source_image).convert("RGB")
@@ -52,7 +53,9 @@ class DiffusionGenerator(DiffusionGeneratorConfig):
         return noisy_images
 
     @staticmethod
-    def visualize(self, source_image: Float[Tensor], noisy_images: list[Float[Tensor]]):
+    def visualize(self,
+                  source_image: Float[Tensor, "batch channel height width"],
+                  noisy_images: list[Float[Tensor, "batch channel height width"]]):
         timesteps = torch.arange(1, self.total_timesteps, self.num_timesteps)
 
         to_pil = transforms.ToPILImage()

@@ -1,11 +1,14 @@
 from dataclasses import dataclass
 from typing import Literal, Optional, TypeVar, Type
-from .dataset.dataloader import DatasetConfig, DataLoaderConfig
-from .model.diffusion import DiffusionConfig
-from .model.denoiser import DenoiserConfig
-from .model.decoder import DecoderConfig
-from .model.model import OptimizerConfig, TrainConfig, TestConfig
-from .loss import LossConfigWrapper
+from src.dataset.dataloader import DatasetConfig, DataLoaderConfig
+from src.model.diffusion import DiffusionGeneratorConfig
+from src.model.denoiser.embedding.timestep_embedding import TimestepMLPConfig
+from src.model.denoiser.embedding.patch_embedding import PatchMLPConfig
+from src.model.denoiser.embedding.positional_embedding import PositionalEmbeddingConfig
+from src.model.denoiser.backbone.transformer_backbone import BackboneConfig
+from src.model.decoder.decoder import GaussianDecoderConfig
+from src.loss import LossesConfig
+from src.model.model import OptimizerConfig, TrainConfig, TestConfig
 from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 from dacite import from_dict, Config
@@ -13,10 +16,16 @@ from dacite import from_dict, Config
 
 @dataclass
 class ModelConfig:
-    diffusion: DiffusionConfig
-    denoiser: DenoiserConfig
-    decoder: DecoderConfig
-
+    diffusion: DiffusionGeneratorConfig
+    timestep: TimestepMLPConfig
+    patchify: PatchMLPConfig
+    positional: PositionalEmbeddingConfig
+    backbone: BackboneConfig
+    decoder: GaussianDecoderConfig
+    losses: LossesConfig
+    optimizer_config: OptimizerConfig
+    train_config: TrainConfig
+    test_config: TestConfig
 
 @dataclass
 class CheckpointConfig:
@@ -42,7 +51,7 @@ class RootConfig:
     optimizer: OptimizerConfig
     checkpoint: CheckpointConfig
     trainer: TrainerConfig
-    loss: list[str]
+    losses: LossesConfig
     train: TrainConfig
     test: TestConfig
     seed: int
@@ -67,16 +76,5 @@ def load_config(
         config=Config(type_hooks={**TYPE_HOOKS, **extra_type_hooks}))
 
 
-def separate_loss_config_wrappers(joined: dict) -> list[LossConfigWrapper]:
-    @dataclass
-    class Dummy:
-        dummy: LossConfigWrapper
-
-    return [
-        load_config(DictConfig({"dummy": {k: v}}), Dummy).dummy
-        for k, v in joined.items()
-    ]
-
-
 def load_root_config(config: DictConfig) -> RootConfig:
-    return load_config(config, RootConfig, {list[LossConfigWrapper]: separate_loss_config_wrappers})
+    return load_config(config, RootConfig)

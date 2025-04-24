@@ -1,16 +1,10 @@
-from .loss import Loss
-from .denoising_loss import DenoisingLoss, DenoisingLossConfigWrapper
-from .novel_view_loss import NovelViewLoss, NovelViewLossConfigWrapper
-from .point_distribution_loss import PointDistributionLoss, PointDistributionLossConfigWrapper
+from dataclasses import dataclass
+from denoising_loss import DenoisingLossConfig
+from novel_view_loss import NovelViewLossConfig
+from point_distribution_loss import PointDistributionLossConfig
 
-LOSSES = {
-    DenoisingLossConfigWrapper: DenoisingLoss,
-    NovelViewLossConfigWrapper: NovelViewLoss,
-    PointDistributionLossConfigWrapper: PointDistributionLoss
-}
-
-LossConfigWrapper = DenoisingLossConfigWrapper | NovelViewLossConfigWrapper | PointDistributionLossConfigWrapper
-
-
-def get_losses(configs: list[LossConfigWrapper]) -> list[Loss]:
-    return [LOSSES[type(config)](config) for config in configs]
+@dataclass
+class LossesConfig:
+    denoising: DenoisingLossConfig
+    novel_view: NovelViewLossConfig
+    point_distribution: PointDistributionLossConfig

@@ -39,3 +39,12 @@ trainer:
   max_steps: -1
   validation_check_interval: 200
 
+losses:
+  denoising:
+
+  novel_view:
+
+  point_distribution:
+
+
+

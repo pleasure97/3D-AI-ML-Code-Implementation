@@ -1,6 +1,6 @@
-from torch import nn, Tensor
+from torch import nn
 from typing import TypeVar, Generic
-from abc import ABC, abstractmethod
+from abc import ABC
 
 
 T_Config = TypeVar("T_Config")
