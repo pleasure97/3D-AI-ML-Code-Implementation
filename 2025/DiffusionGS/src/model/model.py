@@ -29,7 +29,7 @@ class OptimizerConfig:
 
 @dataclass
 class TrainConfig:
-    pass
+    is_object: bool
 
 
 @dataclass
@@ -122,24 +122,24 @@ class DiffusionGS(LightningModule):
             # TODO - Denoising Loss
             if loss.name == "DenoisingLoss":
                 denoising_loss = DenoisingLoss()
-                denoising_loss_value =
+                denoising_loss_value = denoising_loss.forward()
                 self.log(f"loss/{denoising_loss}", denoising_loss_value)
 
             # TODO - Novel View Loss
             else if loss.name == "NovelViewLoss":
                 novel_view_loss = NovelViewLoss()
-                novel_view_loss_value =
+                novel_view_loss_value = novel_view_loss.forward()
                 self.log(f"loss/{novel_view_loss}", novel_view_loss_value)
 
             # TODO - Point Distribution Loss
             else if loss.name == "PointDistributionLoss":
                 point_distribution_loss = PointDistributionLoss()
-                point_distribution_loss_value =
+                point_distribution_loss_value = point_distribution_loss.forward()
                 self.log(f"loss/{point_distribution_loss}", point_distribution_loss_value)
 
         total_loss = torch.where(current_step > warmup_steps,
                                  denoising_loss_value + novel_view_loss_value,
-                                 point_distribution_loss_value * torch.where(is_object, 1, 0))
+                                 point_distribution_loss_value * torch.where(self.training_config.is_object, 1, 0))
 
 
         if self.global_rank == 0:
@@ -166,7 +166,15 @@ class DiffusionGS(LightningModule):
                 f"source = {batch['source']['index'].tolist()}")
 
     def test_step(self, batch, batch_index):
-        pass
+        sample: list[BatchedExample] = self.sample(batch)
+        batch_size, _, _, height, width = sample["target"]["image"].shape
+        assert batch_size == 1
+        if batch_index % 100 == 0:
+            print(f"Test Step {batch_index}")
+
+
+    def on_test_end(self) -> None:
+        name = get_config()
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=self.optimizer_config.learning_rate)
