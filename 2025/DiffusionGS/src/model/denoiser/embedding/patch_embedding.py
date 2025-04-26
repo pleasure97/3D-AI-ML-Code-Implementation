@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import torch.nn as nn
+from src.model import ModuleWithConfig
 
 @dataclass
 class PatchEmbeddingConfig:
@@ -12,7 +13,7 @@ class PatchMLPConfig:
     embedding: PatchEmbeddingConfig
     out_dim: int
 
-class PatchEmbedding(nn.Module):
+class PatchEmbedding(ModuleWithConfig[PatchEmbeddingConfig]):
     """Turns a 2D input image into a 1D sequence learnable embedding vector.
 
     Args:
@@ -44,7 +45,7 @@ class PatchEmbedding(nn.Module):
         x_flattened = self.flatten(x_patched)
         return x_flattened.permute(0, 2, 1)
 
-class PatchMLP(nn.Module, PatchMLPConfig):
+class PatchMLP(ModuleWithConfig[PatchMLPConfig]):
     def __init__(self, config: PatchMLPConfig):
         super().__init__()
 

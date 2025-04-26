@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Literal
-from src.loss import Loss
+from src.loss.base_loss import BaseLoss
 from src.dataset.types import BatchedExample
 from jaxtyping import Float
 import torch
@@ -16,19 +16,18 @@ class DenoisingLossConfig:
 
 
 # Denoised Multi-View Images and N views when timestep is 0
-class DenoisingLoss(Loss[DenoisingLossConfig]):
+class DenoisingLoss(BaseLoss[DenoisingLossConfig]):
     def __init__(self, config: DenoisingLossConfig) -> None:
         super().__init__(config)
 
         self.vgg = VGGLoss()
-
+        self.mse = nn.MSELoss()
     def forward(self,
-                batch: BatchedExample) -> Float[Tensor]:
-        image = batch["target"]["image"]
+                batch: BatchedExample) -> Float:
+        loss = self.mse(batch["source"]["image"], batch["target"]["image"]) \
+                + self.config.weight * self.vgg.forward(batch["source"]["image"], batch["target"]["image"])
 
-        nn.MSELoss() + self.config.weight *
-        loss = self.vgg.forward()
-
+        return loss
 
 # Source code - https://gist.github.com/alper111/
 class VGGLoss(nn.Module):

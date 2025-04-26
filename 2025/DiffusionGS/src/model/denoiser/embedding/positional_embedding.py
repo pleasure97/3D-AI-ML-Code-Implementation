@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Literal
 import torch
 from torch import nn
+from src.model import ModuleWithConfig
 
 @dataclass
 class PositionalEmbeddingConfig:
@@ -9,7 +10,7 @@ class PositionalEmbeddingConfig:
     num_patches: int
     embedding_dim: int
 
-class PositionalEmbedding(nn.Module, PositionalEmbeddingConfig):
+class PositionalEmbedding(ModuleWithConfig[PositionalEmbeddingConfig]):
     def __init__(self, config: PositionalEmbeddingConfig, num_patches: int, embedding_dim: int, device: torch.device):
         super().__init__()
         self.config = config

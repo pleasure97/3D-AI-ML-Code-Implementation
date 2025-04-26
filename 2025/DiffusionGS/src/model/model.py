@@ -1,24 +1,31 @@
 from dataclasses import dataclass
 from lightning.pytorch import LightningModule
 from lightning.pytorch.loggers.wandb import WandbLogger
+from lightning.pytorch.utilities import rank_zero_only
 from typing import Optional
 from pathlib import Path
-from torch import nn, Tensor
 import torch
+from torch import nn, Tensor
+from torch.optim import Adam
+from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
 from diffusion import DiffusionGenerator
 from denoiser.embedding.timestep_embedding import TimestepMLP
 from denoiser.embedding.patch_embedding import PatchMLP
 from denoiser.embedding.positional_embedding import PositionalEmbedding
 from denoiser.backbone.transformer_backbone import TransformerBackbone
 from decoder.decoder import GaussianDecoder
+from src.utils.config_util import get_config
 from src.utils.step_tracker import StepTracker
-from src.loss import LossesConfig
-from torch.optim import Adam
-from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
-from lightning.pytorch.utilities import rank_zero_only
+from src.utils.benchmarker import Benchmarker
 from src.dataset.types import BatchedExample
+from src.model.types import Gaussians
 from src.model.rasterizer.render import render
 from src.evaluation.metrics import get_psnr
+from src.loss import LossesConfig
+from src.loss.base_loss import BaseLoss
+from src.loss.denoising_loss import DenoisingLoss
+from src.loss.novel_view_loss import NovelViewLoss
+from src.loss.point_distribution_loss import PointDistributionLoss
 
 @dataclass
 class OptimizerConfig:
@@ -29,7 +36,7 @@ class OptimizerConfig:
 
 @dataclass
 class TrainConfig:
-    is_object: bool
+    is_object_dataset: bool
 
 
 @dataclass
@@ -61,13 +68,14 @@ class DiffusionGS(LightningModule):
                  positional_embedding: PositionalEmbedding,
                  transformer_backbone: TransformerBackbone,
                  gaussian_decoder: GaussianDecoder,
-                 losses: list[Loss],
+                 losses: list[BaseLoss],
                  step_tracker: StepTracker) -> None:
         super().__init__()
         self.optimizer_config = optimizer_config
         self.train_config = train_config
         self.test_config = test_config
         self.step_tracker = step_tracker
+        self.benchmarker = Benchmarker()
 
         self.diffusion_generator = diffusion_generator
         self.timestep_mlp = timestep_mlp
@@ -119,27 +127,31 @@ class DiffusionGS(LightningModule):
         total_loss = 0
 
         for loss in self.losses:
-            # TODO - Denoising Loss
             if loss.name == "DenoisingLoss":
                 denoising_loss = DenoisingLoss()
-                denoising_loss_value = denoising_loss.forward()
+                denoising_loss_value = denoising_loss.forward(batch)
                 self.log(f"loss/{denoising_loss}", denoising_loss_value)
 
             # TODO - Novel View Loss
-            else if loss.name == "NovelViewLoss":
+            # def forward(self, prediction: Gaussians, batch: BatchedExample) -> Float[Tensor]:
+            elif loss.name == "NovelViewLoss":
                 novel_view_loss = NovelViewLoss()
-                novel_view_loss_value = novel_view_loss.forward()
+                novel_view_loss_value = novel_view_loss.forward(Gaussians(positions, covariances, colors, opacities),
+                                                                batch)
                 self.log(f"loss/{novel_view_loss}", novel_view_loss_value)
 
             # TODO - Point Distribution Loss
-            else if loss.name == "PointDistributionLoss":
+            #   def forward(self,
+            #                 weight_u: float, u_near: float, u_far: float,
+            #                 rays_o: Float[Tensor], rays_d: Float[Tensor], timesteps: int)
+            elif loss.name == "PointDistributionLoss":
                 point_distribution_loss = PointDistributionLoss()
-                point_distribution_loss_value = point_distribution_loss.forward()
+                point_distribution_loss_value = point_distribution_loss.forward(weight_u, u_near, u_far, rays_o, ray_d, timestep)
                 self.log(f"loss/{point_distribution_loss}", point_distribution_loss_value)
 
         total_loss = torch.where(current_step > warmup_steps,
                                  denoising_loss_value + novel_view_loss_value,
-                                 point_distribution_loss_value * torch.where(self.training_config.is_object, 1, 0))
+                                 point_distribution_loss_value * torch.where(self.training_config.is_object_dataset, 1, 0))
 
 
         if self.global_rank == 0:
@@ -174,7 +186,8 @@ class DiffusionGS(LightningModule):
 
 
     def on_test_end(self) -> None:
-        name = get_config()
+        name = get_config()["wandb"]["name"]
+        self.benchmarker.
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=self.optimizer_config.learning_rate)

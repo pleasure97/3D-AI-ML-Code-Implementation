@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 from typing import Literal
+from src.model import ModuleWithConfig
 import torch
 import torch.nn as nn
 from src.model.types import Gaussians
-from src.model.denoiser.embedding.timestep_embedding import TimestepMLP, TimestepMLPConfig
-from src.utils.geometry_util import make_rotation_matrix, multiply_scaling_rotation
+from src.model.denoiser.embedding.timestep_embedding import TimestepMLP
+from src.utils.geometry_util import multiply_scaling_rotation
 
 
 @dataclass
@@ -17,10 +18,10 @@ class GaussianDecoderConfig:
     out_dim: int
     weight: float
     num_points: int
-    timestep_mlp: TimestepMLP[TimestepMLPConfig]
+    timestep_mlp: TimestepMLP
 
 
-class GaussianDecoder(nn.Module, GaussianDecoderConfig):
+class GaussianDecoder(ModuleWithConfig[GaussianDecoderConfig]):
     def __init__(self, config: GaussianDecoderConfig):
         super().__init__()
 

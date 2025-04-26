@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal
 import torch
-from src.loss import Loss
+from src.loss.base_loss import BaseLoss
 from jaxtyping import Float
 from torch import Tensor
 
@@ -12,10 +12,12 @@ class PointDistributionLossConfig:
     sigma_0: float
 
 
-class PointDistributionLoss(Loss[PointDistributionLossConfig]):
+class PointDistributionLoss(BaseLoss[PointDistributionLossConfig]):
     def forward(self,
                 weight_u: float, u_near: float, u_far: float,
-                rays_o: Float[Tensor], rays_d: Float[Tensor], timesteps: int) -> Float[Tensor]:
+                rays_o: Float[Tensor, "batch height * width 3"],
+                rays_d: Float[Tensor, "batch height * width 3"],
+                timesteps: int) -> Float:
         l_ts = []
         for timestep in range(timesteps):
             u_t = weight_u * u_near + (1 - weight_u) * u_far

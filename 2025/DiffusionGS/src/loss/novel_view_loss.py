@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Literal
-from src.loss import Loss
+from src.loss.base_loss import BaseLoss
 from src.model.types import Gaussians
 from src.dataset.types import BatchedExample
 from jaxtyping import Float
@@ -12,8 +12,8 @@ class NovelViewLossConfig:
     name: Literal["novel_view_loss"]
     weight: float
 
-class NovelViewLoss(Loss[NovelViewLossConfig]):
-    def forward(self, prediction: Gaussians, batch: BatchedExample) -> Float[Tensor]:
+class NovelViewLoss(BaseLoss[NovelViewLossConfig]):
+    def forward(self, prediction: Gaussians, batch: BatchedExample) -> Float:
         delta = prediction.colors - batch["target"]["image"]
         return self.config.weight * (delta ** 2).mean()
 

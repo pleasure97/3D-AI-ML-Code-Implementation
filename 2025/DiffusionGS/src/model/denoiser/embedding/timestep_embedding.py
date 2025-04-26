@@ -3,6 +3,7 @@ from typing import Literal
 import torch
 import torch.nn as nn
 import math
+from src.model import ModuleWithConfig
 
 @dataclass
 class TimestepEmbeddingConfig:
@@ -16,7 +17,7 @@ class TimestepMLPConfig:
     embedding: TimestepEmbeddingConfig
     out_dim: int
 
-class TimestepEmbedding(nn.Module, TimestepEmbeddingConfig):
+class TimestepEmbedding(ModuleWithConfig[TimestepEmbeddingConfig]):
     def __init__(self, config: TimestepEmbeddingConfig):
         super().__init__()
         self.config = config
@@ -36,7 +37,7 @@ class TimestepEmbedding(nn.Module, TimestepEmbeddingConfig):
         return embedding
 
 
-class TimestepMLP(nn.Module, TimestepMLPConfig):
+class TimestepMLP(ModuleWithConfig[TimestepMLPConfig]):
     def __init__(self, config: TimestepMLPConfig):
         super().__init__()
 
