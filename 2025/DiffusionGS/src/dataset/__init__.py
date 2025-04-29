@@ -8,7 +8,7 @@ from .dataset_mvimgnet import DatasetMVImgNet
 from .dataset_realestate10k import DatasetRealEstate10K
 from .dataset_dl3dv10k import DatasetDL3DV10K
 from .types import Stage
-from ..utils.step_tracker import StepTracker
+from src.utils.step_tracker import StepTracker
 
 
 DATASETS: dict[str, Dataset] = {

@@ -8,24 +8,22 @@ import torch
 from torch import nn, Tensor
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
-from diffusion import DiffusionGenerator
-from denoiser.embedding.timestep_embedding import TimestepMLP
-from denoiser.embedding.patch_embedding import PatchMLP
-from denoiser.embedding.positional_embedding import PositionalEmbedding
-from denoiser.backbone.transformer_backbone import TransformerBackbone
-from decoder.decoder import GaussianDecoder
 from src.utils.config_util import get_config
 from src.utils.step_tracker import StepTracker
 from src.utils.benchmarker import Benchmarker
 from src.dataset.types import BatchedExample
+from src.model.diffusion import DiffusionGenerator
 from src.model.types import Gaussians
 from src.model.rasterizer.render import render
+from src.model.denoiser.embedding.timestep_embedding import TimestepMLP
+from src.model.denoiser.embedding.patch_embedding import PatchMLP
+from src.model.denoiser.embedding.positional_embedding import PositionalEmbedding
+from src.model.denoiser.backbone.transformer_backbone import TransformerBackbone
+from src.model.decoder.decoder import GaussianDecoder
 from src.evaluation.metrics import get_psnr
 from src.loss import LossesConfig
 from src.loss.base_loss import BaseLoss
-from src.loss.denoising_loss import DenoisingLoss
-from src.loss.novel_view_loss import NovelViewLoss
-from src.loss.point_distribution_loss import PointDistributionLoss
+
 
 @dataclass
 class OptimizerConfig:
@@ -81,7 +79,28 @@ class DiffusionGS(LightningModule):
         self.timestep_mlp = timestep_mlp
         self.patch_mlp = patch_mlp
         self.positional_embedding = positional_embedding
-        self.sample = None
+
+        # def rescale(
+        #         image: Float[Tensor, "3 height width"],
+        #         shape: tuple[int, int]) -> Float[Tensor, "3 height width"]:
+        #
+        # def center_crop(
+        #         images: Float[Tensor, "*#batch channel height width"],
+        #         intrinsics: Float[Tensor, "*batch 3 3"],
+        #         shape: tuple[int, int]
+        # ) -> tuple[Float[Tensor, "*#batch channel height_out width_out"], Float[Tensor, "*#batch 3 3"]]:
+        #
+        # def crop_and_scale(
+        #         images: Float[Tensor, "*#batch channel height width"],
+        #         intrinsics: Float[Tensor, "*#batch 3 3"],
+        #         shape: tuple[int, int]
+        # ) -> tuple[Float[Tensor, "*#batch channel height_out width_out"], Float[Tensor, "*#batch 3 3"]]:
+        #
+        # def crop_views(views: BatchedViews, shape: tuple[int, int]) -> BatchedViews:
+        #
+        # def crop_example(example: BatchedExample, shape: tuple[int, int]) -> BatchedExample:
+        # def remove_background(images: Float[Tensor, "*#batch channel height width"]):
+
         self.transformer_backbone = transformer_backbone
         self.gaussian_decoder = gaussian_decoder
         self.losses = nn.ModuleList(losses)
@@ -99,60 +118,60 @@ class DiffusionGS(LightningModule):
         noisy_images = []
         rasterized_images = []
         noisy_images = self.diffusion_generator.generate(batch)
-        for timestep in reversed(range(self.diffusion_generator.total_timesteps, self.diffusion_generator.num_timesteps)):
+        for timestep in reversed(
+                range(self.diffusion_generator.total_timesteps, self.diffusion_generator.num_timesteps)):
             for sample in samples:
                 noisy_image = noisy_images[timestep]
 
                 timestep_mlp_output = self.timestep_mlp(timestep)
                 transformer_backbone_input = self.patch_mlp(sample["target"]) + self.positional_embedding
                 transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep)
-                positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output, transformer_backbone_output)
+                positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output,
+                                                                                  transformer_backbone_output)
 
                 rasterized_image = render(sample["target"]["extrinsics"],
-                               sample["target"]["intrinsics"],
-                               sample["target"]["near"],
-                               sample["target"]["far"],
-                               sample["target"]["image"].shape,
-                               background_color,
-                               colors,
-                               positions,
-                               covariances,
-                               opacities)
+                                          sample["target"]["intrinsics"],
+                                          sample["target"]["near"],
+                                          sample["target"]["far"],
+                                          sample["target"]["image"].shape,
+                                          background_color,
+                                          colors,
+                                          positions,
+                                          covariances,
+                                          opacities)
 
                 # TODO - Compute the metrics
                 psnr = get_psnr(batch["target"]["image"], rasterized_image)
                 self.log("train/psnr", psnr)
 
         # TODO - Compute the loss
-        total_loss = 0
+        loss_dict = {}
 
         for loss in self.losses:
             if loss.name == "DenoisingLoss":
-                denoising_loss = DenoisingLoss()
-                denoising_loss_value = denoising_loss.forward(batch)
-                self.log(f"loss/{denoising_loss}", denoising_loss_value)
+                loss_value = loss.forward(batch)
+                loss_dict[loss.name] = loss_value
 
             # TODO - Novel View Loss
             # def forward(self, prediction: Gaussians, batch: BatchedExample) -> Float[Tensor]:
             elif loss.name == "NovelViewLoss":
-                novel_view_loss = NovelViewLoss()
-                novel_view_loss_value = novel_view_loss.forward(Gaussians(positions, covariances, colors, opacities),
-                                                                batch)
-                self.log(f"loss/{novel_view_loss}", novel_view_loss_value)
+                loss_value = loss.forward(Gaussians(positions, covariances, colors, opacities), batch)
+                loss_dict[loss.name] = loss_value
 
             # TODO - Point Distribution Loss
             #   def forward(self,
             #                 weight_u: float, u_near: float, u_far: float,
             #                 rays_o: Float[Tensor], rays_d: Float[Tensor], timesteps: int)
             elif loss.name == "PointDistributionLoss":
-                point_distribution_loss = PointDistributionLoss()
-                point_distribution_loss_value = point_distribution_loss.forward(weight_u, u_near, u_far, rays_o, ray_d, timestep)
-                self.log(f"loss/{point_distribution_loss}", point_distribution_loss_value)
+                loss_value = loss.forward(weight_u, u_near, u_far, rays_o, ray_d, timestep)
+                loss_dict[loss.name] = loss_value
+
+            self.log(f"loss/{loss.name}", loss_value)
 
         total_loss = torch.where(current_step > warmup_steps,
-                                 denoising_loss_value + novel_view_loss_value,
-                                 point_distribution_loss_value * torch.where(self.training_config.is_object_dataset, 1, 0))
-
+                                 loss_dict["DenoisingLoss"] + loss_dict["NovelViewLoss"],
+                                 loss_dict["PointDistribution"] * torch.where(self.training_config.is_object_dataset, 1,
+                                                                              0))
 
         if self.global_rank == 0:
             print(f"train step {self.global_step}; "
@@ -160,12 +179,10 @@ class DiffusionGS(LightningModule):
                   f"source = {batch['source']['index'].tolist()}"
                   f"loss = {total_loss:.6f}")
 
-
         if self.step_tracker is not None:
             self.step_tracker.set_step(self.global_step)
 
         return total_loss
-
 
     @rank_zero_only
     def validation_step(self, batch, batch_index):
@@ -184,17 +201,19 @@ class DiffusionGS(LightningModule):
         if batch_index % 100 == 0:
             print(f"Test Step {batch_index}")
 
-
     def on_test_end(self) -> None:
         name = get_config()["wandb"]["name"]
-        self.benchmarker.
+        self.benchmarker.dump(self.test_config.output_path / name / "benchmark.json")
+        self.benchmarker.dump_memory(self.test_config.output_path / name / "peak_memory.json")
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=self.optimizer_config.learning_rate)
         warmup_scheduler = LambdaLR(optimizer,
-                                    lr_lambda=lambda epoch, warmup_iters: epoch / warmup_iters if epoch < warmup_iters else 1)
+                                    lr_lambda=lambda epoch,
+                                                     warmup_iters: epoch / warmup_iters if epoch < warmup_iters else 1)
         cosine_annealing_scheduler = CosineAnnealingLR(optimizer,
-                                                       T_max=self.optimizer_config.total_steps - self.optimizer_config.warmup_steps, eta_min=0)
+                                                       T_max=self.optimizer_config.total_steps - self.optimizer_config.warmup_steps,
+                                                       eta_min=0)
         scheduler = SequentialLR(optimizer,
                                  schedulers=[warmup_scheduler, cosine_annealing_scheduler],
                                  milestones=[self.optimizer_config.warmup_steps])

@@ -1,8 +1,8 @@
 defaults:
   - dataset: [Objaverse, MVImgNet, RealEstate10K, DL3DV10K]
-  - model/embedding: [timestep_embedding, positional_embedding]
-  - model/encoder: [timestep_mlp, patchify_mlp, transformer_block]
-  - model/decoder: [object_decoder, scene_decoder]
+#  - model/embedding: [timestep_embedding, positional_embedding]
+#  - model/encoder: [timestep_mlp, patchify_mlp, transformer_backbone]
+#  - model/decoder: [object_decoder, scene_decoder]
   - loss: [point_distribution_loss, denoising_loss, novel_view_loss]
 
 wandb:

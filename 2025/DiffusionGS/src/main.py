@@ -11,6 +11,13 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from src.utils.step_tracker import StepTracker
 from lightning.pytorch import Trainer
 from model.model import DiffusionGS
+from model.diffusion import DiffusionGenerator
+from model.denoiser.embedding.timestep_embedding import TimestepMLP
+from model.denoiser.embedding.patch_embedding import PatchMLP
+from model.denoiser.embedding.positional_embedding import PositionalEmbedding
+from model.denoiser.backbone.transformer_backbone import TransformerBackbone
+from model.decoder.decoder import GaussianDecoder
+from loss.base_loss import BaseLoss
 from dataset.dataloader import DataModule
 
 @hydra.main(version_base=None, config_path="../config", config_name="main")
@@ -75,11 +82,15 @@ def train(config_dict: DictConfig):
 
     diffusion_gs = DiffusionGS(
         config.optimizer,
-        config.test,
         config.train,
-        get_denoiser(config.model.denoiser),
-        get_decoder(config.model.decoder, config.dataset),
-        get_losses(config.loss),
+        config.test,
+        DiffusionGenerator[config.model.diffusion],
+        TimestepMLP[config.model.timestep],
+        PatchMLP[config.model.patchify],
+        PositionalEmbedding[config.model.positional],
+        TransformerBackbone[config.model.backbone],
+        GaussianDecoder[config.model.decoder],
+        [BaseLoss[loss] for loss in config.losses],     # losses: list[BaseLoss],
         step_tracker)
 
     data_module = DataModule(config.dataset, config.dataloader, step_tracker, global_rank=trainer.global_rank)
