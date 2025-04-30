@@ -1,2 +1,3 @@
 2025/DiffusionGS/script/model/diff-gaussian-rasterization/
 **/*.pyc
+**/*.log
