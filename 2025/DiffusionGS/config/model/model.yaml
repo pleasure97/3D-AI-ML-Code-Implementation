@@ -1,0 +1,19 @@
+#diffusion: diffusion/diffusion_generator
+#timestep: denoiser/embedding/timestep_mlp
+#patchify: denoiser/embedding/patch_mlp
+#positional: denoiser/embedding/positional_embedding
+#backbone: denoiser/backbone/transformer_backbone
+#object_decoder: decoder/object_decoder
+#scene_decoder: decoder/scene_decoder
+#losses:
+#  denoising_loss: ./loss/denoising_loss
+#  novel_view_loss: ./loss/novel_view_loss
+#  point_distribution_loss: ./loss/point_distribution_loss
+#optimizer_config:
+#  learning_rate: 4e-4
+#  total_steps: #int
+#  warmup_steps: 2000
+#train_config:
+#  is_object_dataset: #bool
+#test_config:
+#  output_path: #Path

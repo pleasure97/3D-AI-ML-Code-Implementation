@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 import torch.nn as nn
 from src.model import ModuleWithConfig
 
@@ -10,6 +11,7 @@ class PatchEmbeddingConfig:
 
 @dataclass
 class PatchMLPConfig:
+    name: Literal["patch_mlp"]
     embedding: PatchEmbeddingConfig
     out_dim: int
 

@@ -1,5 +1,5 @@
-name: Objaverse
-path: datasets/Objaverse
+name: MVImgNet
+path: datasets/MVImgNet
 image_shape: [180, 320]
 remove_background: true
 center_and_scale: true

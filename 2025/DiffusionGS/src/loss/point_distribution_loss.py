@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Literal
 import torch
 from src.loss.base_loss import BaseLoss
 from jaxtyping import Float
@@ -8,7 +7,6 @@ from torch import Tensor
 
 @dataclass
 class PointDistributionLossConfig:
-    name: Literal["point_distribution_loss"]
     sigma_0: float
 
 

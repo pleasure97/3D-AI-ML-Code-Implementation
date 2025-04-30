@@ -4,6 +4,6 @@ u_far: 4.2
 input_dim: 768
 hidden_dim: 768
 out_dim: 14
-weight:
-num_points:
-timestep_mlp:
+weight: #float
+num_points: #int
+timestep_mlp: denoiser/embedding/timestep_mlp

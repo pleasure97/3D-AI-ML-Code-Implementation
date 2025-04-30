@@ -55,7 +55,7 @@ def train(config_dict: DictConfig):
     callbacks.append(
         ModelCheckpoint(
             output_dir / "checkpoints",
-            every_n_train_steps=config.checkpoint.every_num_time_steps,
+            every_n_train_steps=config.checkpoint.every_num_timesteps,
             save_top_k=config.checkpoint.save_top_k
         )
     )

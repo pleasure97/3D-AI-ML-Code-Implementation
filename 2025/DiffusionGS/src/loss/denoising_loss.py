@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Literal
 from src.loss.base_loss import BaseLoss
 from src.dataset.types import BatchedExample
 from jaxtyping import Float
@@ -11,7 +10,6 @@ import torchvision
 
 @dataclass
 class DenoisingLossConfig:
-    name: Literal["denoising_loss"]
     weight: float
 
 

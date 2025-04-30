@@ -49,7 +49,8 @@ class DiffusionGS(LightningModule):
     patch_mlp: PatchMLP
     positional_embedding: PositionalEmbedding
     transformer_backbone: TransformerBackbone
-    gaussian_decoder: GaussianDecoder
+    object_decoder: GaussianDecoder
+    scene_decoder: GaussianDecoder
     losses: LossesConfig
     optimizer_config: OptimizerConfig
     train_config: TrainConfig

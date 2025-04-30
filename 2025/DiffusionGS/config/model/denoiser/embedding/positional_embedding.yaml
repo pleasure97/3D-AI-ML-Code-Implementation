@@ -1,0 +1,3 @@
+name: positional_embedding
+num_patches: #int
+embedding_dim: #int

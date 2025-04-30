@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 @dataclass
 class ViewSamplerConfig:
-    name: Literal["ViewSampler"]
+    name: Literal["view_sampler"]
     num_source_views: int
     num_target_views: int
     source_views: list[int] | None

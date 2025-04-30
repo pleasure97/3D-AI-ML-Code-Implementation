@@ -1,8 +1,0 @@
-name: transformer
-
-transformer_block:
-  self_attention:
-    patch_size: 16
-    num_layers: 6
-    num_heads: 12
-  d_embedding: 768

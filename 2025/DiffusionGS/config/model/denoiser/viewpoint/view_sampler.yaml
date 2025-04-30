@@ -1,0 +1,9 @@
+name: view_sampler
+num_source_views: # int
+num_target_views: #int
+source_views: #list[int] | None
+target_views: # list[int] | None
+theta1: 45.   # Maximum Angle between Noisy View and Condition View (45.)
+theta2: 60.   # Maximum Angle between Noisy View and Novel View (60.)
+phi1: 60.     # Minimum Cosine Angle between Noisy Direction and Condition Direction (60.)
+phi2: 75.     # Minimum Cosine Angle between Novel Direction and Condition Direction (75.)

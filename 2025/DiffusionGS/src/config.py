@@ -21,7 +21,8 @@ class ModelConfig:
     patchify: PatchMLPConfig
     positional: PositionalEmbeddingConfig
     backbone: BackboneConfig
-    decoder: GaussianDecoderConfig
+    object_decoder: GaussianDecoderConfig
+    scene_decoder: GaussianDecoderConfig
     losses: LossesConfig
     optimizer_config: OptimizerConfig
     train_config: TrainConfig
@@ -30,7 +31,7 @@ class ModelConfig:
 @dataclass
 class CheckpointConfig:
     load: Optional[str]  # wandb://
-    every_num_time_steps: int
+    every_num_timesteps: int
     save_top_k: int
 
 

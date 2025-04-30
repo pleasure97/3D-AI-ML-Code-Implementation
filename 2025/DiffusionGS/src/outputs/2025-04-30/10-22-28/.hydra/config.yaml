@@ -1,0 +1,47 @@
+dataset:
+  name: RealEstate10K
+  path: datasets/RealEstate10K
+  image_shape:
+  - 180
+  - 320
+  max_fov: 100.0
+  num_images_to_render: 32
+  download_processes: 12
+  background_color:
+  - 0.0
+  - 0.0
+  - 0.0
+  cameras_are_circular: false
+loss:
+  name: novel_view_loss
+  sigma_0: 0.5
+  weight: 0.8
+wandb:
+  project: DiffusionGS
+mode: train
+data_loader:
+  train:
+    num_workers: 8
+    batch_size: 16
+    seed: 1234
+  test:
+    num_workers: 4
+    batch_size: 16
+    seed: 1234
+  validation:
+    num_workers: 1
+    batch_size: 16
+    seed: 1234
+optimizer:
+  lr: 0.0004
+  warm_up_steps: 2000
+train: null
+test:
+  output_path: outputs/test
+trainer:
+  max_steps: -1
+  validation_check_interval: 200
+losses:
+  denoising: null
+  novel_view: null
+  point_distribution: null

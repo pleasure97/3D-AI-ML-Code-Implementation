@@ -1,0 +1,8 @@
+name: transformer_backbone
+layer:
+  name: transformer_backbone_layer
+  timestep_mlp: embedding/timestep_mlp
+  attention_dim: int
+  num_heads: int
+  dropout: float
+num_layers: 6

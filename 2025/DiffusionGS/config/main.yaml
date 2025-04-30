@@ -1,8 +1,7 @@
 defaults:
-  - dataset: [Objaverse, MVImgNet, RealEstate10K, DL3DV10K]
-#  - model/embedding: [timestep_embedding, positional_embedding]
-#  - model/encoder: [timestep_mlp, patchify_mlp, transformer_backbone]
-#  - model/decoder: [object_decoder, scene_decoder]
+  - dataset: [Objaverse, MVImgNet, RealEstate10K] # DL3DV10K
+  - dataloader:
+  - model: "model/model"
   - loss: [point_distribution_loss, denoising_loss, novel_view_loss]
 
 wandb:
@@ -11,40 +10,106 @@ wandb:
 mode: train
 
 dataset:
+  name: #str
+  path: #str
+  image_shape: #list[int]
+  remove_background: #bool
+  center_and_scale: #bool
 
-data_loader:
+dataloader:
   train:
-    num_workers: 8
     batch_size: 16
+    num_workers: 8
     seed: 1234
   test:
-    num_workers: 4
     batch_size: 16
+    num_workers: 4
     seed: 1234
   validation:
-    num_workers: 1
     batch_size: 16
+    num_workers: 1
     seed: 1234
+
+model:
+  diffusion:
+    model_id: "ptx0/pseudo-journey-v2"
+    timestep_spacing: "trailing"
+    total_timesteps: 101
+    num_timesteps: 1
+  timestep:
+    name: "timestep_mlp"
+    embedding:
+      name: "timestep_embedding"
+      time_dim: #int
+      max_period: #int
+  patchify:
+    embedding:
+      in_channels: #int
+      patch_size: #int
+      embedding_dim: #int
+    out_dim: #int
+  positional:
+    name: "positional_embedding"
+    num_patches: #int
+    embedding_dim: #int
+  backbone:
+    name: "transformer_backbone"
+    layer:
+      name: "transformer_backbone_layer"
+      timestep_mlp: "embedding/timestep_mlp"
+      attention_dim: int
+      num_heads: int
+      dropout: float
+    num_layers: 6
+  object_decoder:
+    name: "object_decoder"
+    u_near: 0.1
+    u_far: 4.2
+    input_dim: 768
+    hidden_dim: 768
+    out_dim: 14
+    weight: #float
+    num_points: #int
+    timestep_mlp: "denoiser/embedding/timestep_mlp"
+  scene_decoder:
+    name: scene_decoder
+    u_near: 0.
+    u_far: 500.
+    input_dim: 768
+    hidden_dim: 768
+    out_dim: 14
+    weight: #float
+    num_points: #int
+    timestep_mlp: "denoiser/embedding/timestep_mlp"
 
 optimizer:
   lr: 4e-4
-  warm_up_steps: 2000
+  total_steps: #int
+  warmup_steps: 2000
 
-train:
-
-test:
-  output_path: outputs/test
+checkpoint:
+  load: "wandb://"
+  every_num_timesteps: #int
+  save_top_k: #int
 
 trainer:
   max_steps: -1
   validation_check_interval: 200
+  gradient_clip_validation: #int | Float | None
 
 losses:
   denoising:
-
+    weight: 0.8
   novel_view:
-
+    weight: 0.8
   point_distribution:
+    sigma_0: 0.5
+
+train:
+  is_object_dataset: #bool
+
+test:
+  output_path: "outputs/test"
 
 
 
