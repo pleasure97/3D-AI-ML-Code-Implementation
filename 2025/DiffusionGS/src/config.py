@@ -23,10 +23,6 @@ class ModelConfig:
     backbone: BackboneConfig
     object_decoder: GaussianDecoderConfig
     scene_decoder: GaussianDecoderConfig
-    losses: LossesConfig
-    optimizer_config: OptimizerConfig
-    train_config: TrainConfig
-    test_config: TestConfig
 
 @dataclass
 class CheckpointConfig:

@@ -1,20 +1,22 @@
 defaults:
   - dataset: [Objaverse, MVImgNet, RealEstate10K] # DL3DV10K
   - dataloader:
-  - model: "model/model"
+  - model: "model"
   - loss: [point_distribution_loss, denoising_loss, novel_view_loss]
 
 wandb:
   project: DiffusionGS
+  name: Experiment1
+  mode: online
 
 mode: train
 
 dataset:
-  name: #str
-  path: #str
-  image_shape: #list[int]
-  remove_background: #bool
-  center_and_scale: #bool
+  name: MVImgNet
+  path: datasets/MVImgNet
+  image_shape: [180, 320]
+  remove_background: True
+  center_and_scale: True
 
 dataloader:
   train:
@@ -40,26 +42,34 @@ model:
     name: "timestep_mlp"
     embedding:
       name: "timestep_embedding"
-      time_dim: #int
-      max_period: #int
+      time_dim: 128
+      max_period: 10_000
+    out_dim: 768
   patchify:
+    name: "patch_mlp"
     embedding:
-      in_channels: #int
-      patch_size: #int
-      embedding_dim: #int
-    out_dim: #int
+      in_channels: 3
+      patch_size: 16
+      embedding_dim: 768
+    out_dim: 768
   positional:
     name: "positional_embedding"
-    num_patches: #int
-    embedding_dim: #int
+    num_patches: 16
+    embedding_dim: 512
   backbone:
     name: "transformer_backbone"
     layer:
       name: "transformer_backbone_layer"
-      timestep_mlp: "embedding/timestep_mlp"
-      attention_dim: int
-      num_heads: int
-      dropout: float
+      timestep_mlp:
+        name: "timestep_mlp"
+        embedding:
+          name: "timestep_embedding"
+          time_dim: 128
+          max_period: 10_000
+        out_dim: 768
+      attention_dim: 512
+      num_heads: 8
+      dropout: 0.1
     num_layers: 6
   object_decoder:
     name: "object_decoder"
@@ -68,9 +78,15 @@ model:
     input_dim: 768
     hidden_dim: 768
     out_dim: 14
-    weight: #float
-    num_points: #int
-    timestep_mlp: "denoiser/embedding/timestep_mlp"
+    weight: 0.5
+    num_points: 8192
+    timestep_mlp:
+      name: "timestep_mlp"
+      embedding:
+        name: "timestep_embedding"
+        time_dim: 128
+        max_period: 10_000
+      out_dim: 768
   scene_decoder:
     name: scene_decoder
     u_near: 0.
@@ -78,24 +94,30 @@ model:
     input_dim: 768
     hidden_dim: 768
     out_dim: 14
-    weight: #float
-    num_points: #int
-    timestep_mlp: "denoiser/embedding/timestep_mlp"
+    weight: 0.5
+    num_points: 8192
+    timestep_mlp:
+      name: "timestep_mlp"
+      embedding:
+        name: "timestep_embedding"
+        time_dim: 128
+        max_period: 10_000
+      out_dim: 768
 
 optimizer:
-  lr: 4e-4
-  total_steps: #int
-  warmup_steps: 2000
+  learning_rate: 4e-4
+  total_steps: 40_000
+  warmup_steps: 2_000
 
 checkpoint:
-  load: "wandb://"
-  every_num_timesteps: #int
-  save_top_k: #int
+  load: "wandb://conple21"
+  every_num_timesteps: 5000
+  save_top_k: -1
 
 trainer:
   max_steps: -1
   validation_check_interval: 200
-  gradient_clip_validation: #int | Float | None
+  gradient_clip_validation: 0.5
 
 losses:
   denoising:
@@ -106,10 +128,11 @@ losses:
     sigma_0: 0.5
 
 train:
-  is_object_dataset: #bool
+  is_object_dataset: True
 
 test:
   output_path: "outputs/test"
 
+seed: 12
 
 

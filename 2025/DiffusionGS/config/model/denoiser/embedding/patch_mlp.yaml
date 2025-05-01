@@ -1,7 +1,7 @@
 name: "patch_mlp"
 embedding:
-  in_channels: #int
-  patch_size: #int
-  embedding_dim: #int
-out_dim: #int
+  in_channels: 3
+  patch_size: 16
+  embedding_dim: 768
+out_dim: 768
 

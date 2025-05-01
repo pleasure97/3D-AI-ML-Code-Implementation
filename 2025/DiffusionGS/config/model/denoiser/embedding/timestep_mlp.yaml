@@ -1,6 +1,6 @@
-name: timestep_mlp
+name: "timestep_mlp"
 embedding:
-  name: timestep_embedding
-  time_dim: #int
-  max_period: #int
-out_dim: #int
+  name: "timestep_embedding"
+  time_dim: 128
+  max_period: 10_000
+out_dim: 768

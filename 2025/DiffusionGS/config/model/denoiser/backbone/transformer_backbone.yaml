@@ -1,7 +1,13 @@
-name: transformer_backbone
+name: "transformer_backbone"
 layer:
-  name: transformer_backbone_layer
-  timestep_mlp: embedding/timestep_mlp
+  name: "transformer_backbone_layer"
+  timestep_mlp:
+    name: "timestep_mlp"
+    embedding:
+      name: "timestep_embedding"
+      time_dim: 128
+      max_period: 10_000
+    out_dim: 768
   attention_dim: int
   num_heads: int
   dropout: float

@@ -4,7 +4,6 @@ from src.model import ModuleWithConfig
 import torch
 import torch.nn as nn
 from src.model.types import Gaussians
-from src.model.denoiser.embedding.timestep_embedding import TimestepMLP
 from src.utils.geometry_util import multiply_scaling_rotation
 
 
@@ -18,7 +17,6 @@ class GaussianDecoderConfig:
     out_dim: int
     weight: float
     num_points: int
-    timestep_mlp: TimestepMLP
 
 
 class GaussianDecoder(ModuleWithConfig[GaussianDecoderConfig]):

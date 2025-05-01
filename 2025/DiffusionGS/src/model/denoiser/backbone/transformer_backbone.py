@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from typing import Literal
 from src.model import ModuleWithConfig
-from src.model.denoiser.embedding.timestep_embedding import TimestepMLP
+from src.model.denoiser.embedding.timestep_embedding import TimestepMLP, TimestepMLPConfig
 from src.model.denoiser.viewpoint.RPPC import reference_point_plucker_embedding
 import torch.nn as nn
 
 @dataclass
 class BackboneLayerConfig:
     name: Literal["transformer_backbone_layer"]
-    timestep_mlp: TimestepMLP
+    timestep_mlp: TimestepMLPConfig
     attention_dim: int
     num_heads: int
     dropout: float
@@ -24,7 +24,7 @@ class TransformerBackboneLayer(ModuleWithConfig[BackboneLayerConfig]):
 
         self.config = config
 
-        self.timestep_mlp = self.config.timestep_mlp
+        self.timestep_mlp = TimestepMLP(self.config.timestep_mlp)
 
         self.self_attn = nn.MultiheadAttention(self.config.attention_dim, num_heads=12)
 
