@@ -23,3 +23,7 @@ dependencies:
       - diffusers
       - dacite
       - pycolmap
+      - accelerate
+      - transformers
+      - huggingface_hub
+      - hf_xet

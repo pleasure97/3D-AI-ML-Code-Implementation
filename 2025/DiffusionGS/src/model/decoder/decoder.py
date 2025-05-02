@@ -14,14 +14,14 @@ class GaussianDecoderConfig:
     u_far: float
     input_dim: int
     hidden_dim: int
-    out_dim: int
+    output_dim: int
     weight: float
     num_points: int
 
 
 class GaussianDecoder(ModuleWithConfig[GaussianDecoderConfig]):
     def __init__(self, config: GaussianDecoderConfig):
-        super().__init__()
+        super().__init__(config)
 
         self.config = config
 

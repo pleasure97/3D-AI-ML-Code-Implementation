@@ -5,6 +5,7 @@ defaults:
   - loss: [point_distribution_loss, denoising_loss, novel_view_loss]
 
 wandb:
+  entity: cople21
   project: DiffusionGS
   name: Experiment1
   mode: online
@@ -77,7 +78,7 @@ model:
     u_far: 4.2
     input_dim: 768
     hidden_dim: 768
-    out_dim: 14
+    output_dim: 14
     weight: 0.5
     num_points: 8192
     timestep_mlp:
@@ -93,7 +94,7 @@ model:
     u_far: 500.
     input_dim: 768
     hidden_dim: 768
-    out_dim: 14
+    output_dim: 14
     weight: 0.5
     num_points: 8192
     timestep_mlp:
@@ -110,7 +111,7 @@ optimizer:
   warmup_steps: 2_000
 
 checkpoint:
-  load: "wandb://conple21"
+  load: null
   every_num_timesteps: 5000
   save_top_k: -1
 

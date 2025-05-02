@@ -26,7 +26,7 @@ class PatchEmbedding(ModuleWithConfig[PatchEmbeddingConfig]):
 
     def __init__(self,
                  config: PatchEmbeddingConfig):
-        super().__init__()
+        super().__init__(config)
 
         self.config = config
 
@@ -49,7 +49,7 @@ class PatchEmbedding(ModuleWithConfig[PatchEmbeddingConfig]):
 
 class PatchMLP(ModuleWithConfig[PatchMLPConfig]):
     def __init__(self, config: PatchMLPConfig):
-        super().__init__()
+        super().__init__(config)
 
         self.config = config
 

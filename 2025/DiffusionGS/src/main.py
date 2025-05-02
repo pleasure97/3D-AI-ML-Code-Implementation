@@ -84,13 +84,14 @@ def train(config_dict: DictConfig):
         config.optimizer,
         config.train,
         config.test,
-        DiffusionGenerator[config.model.diffusion],
-        TimestepMLP[config.model.timestep],
-        PatchMLP[config.model.patchify],
-        PositionalEmbedding[config.model.positional],
-        TransformerBackbone[config.model.backbone],
-        GaussianDecoder[config.model.decoder],
-        [BaseLoss[loss] for loss in config.losses],     # losses: list[BaseLoss],
+        DiffusionGenerator(config.model.diffusion),
+        TimestepMLP(config.model.timestep),
+        PatchMLP(config.model.patchify),
+        PositionalEmbedding(config.model.positional),
+        TransformerBackbone(config.model.backbone),
+        GaussianDecoder(config.model.object_decoder),
+        GaussianDecoder(config.model.scene_decoder),
+        [BaseLoss(loss) for loss in config.losses],     # losses: list[BaseLoss],
         step_tracker)
 
     data_module = DataModule(config.dataset, config.dataloader, step_tracker, global_rank=trainer.global_rank)

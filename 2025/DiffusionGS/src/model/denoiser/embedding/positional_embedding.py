@@ -12,7 +12,7 @@ class PositionalEmbeddingConfig:
 
 class PositionalEmbedding(ModuleWithConfig[PositionalEmbeddingConfig]):
     def __init__(self, config: PositionalEmbeddingConfig):
-        super().__init__()
+        super().__init__(config)
         self.config = config
         self.positional_embedding = nn.Parameter(
             torch.ones(1, self.config.num_patches, self.config.embedding_dim), requires_grad=True)

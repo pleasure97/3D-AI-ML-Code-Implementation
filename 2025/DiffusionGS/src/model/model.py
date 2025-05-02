@@ -66,7 +66,8 @@ class DiffusionGS(LightningModule):
                  patch_mlp: PatchMLP,
                  positional_embedding: PositionalEmbedding,
                  transformer_backbone: TransformerBackbone,
-                 gaussian_decoder: GaussianDecoder,
+                 object_decoder: GaussianDecoder,
+                 scene_decoder: GaussianDecoder,
                  losses: list[BaseLoss],
                  step_tracker: StepTracker) -> None:
         super().__init__()
@@ -103,7 +104,8 @@ class DiffusionGS(LightningModule):
         # def remove_background(images: Float[Tensor, "*#batch channel height width"]):
 
         self.transformer_backbone = transformer_backbone
-        self.gaussian_decoder = gaussian_decoder
+        self.object_decoder = object_decoder
+        self.scene_decoder = scene_decoder
         self.losses = nn.ModuleList(losses)
 
     def training_step(self, batch, batch_index):

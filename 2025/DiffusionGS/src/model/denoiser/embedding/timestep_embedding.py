@@ -19,7 +19,7 @@ class TimestepMLPConfig:
 
 class TimestepEmbedding(ModuleWithConfig[TimestepEmbeddingConfig]):
     def __init__(self, config: TimestepEmbeddingConfig):
-        super().__init__()
+        super().__init__(config)
         self.config = config
         self.time_dim = self.config.time_dim
         self.max_period = self.config.max_period
@@ -39,7 +39,7 @@ class TimestepEmbedding(ModuleWithConfig[TimestepEmbeddingConfig]):
 
 class TimestepMLP(ModuleWithConfig[TimestepMLPConfig]):
     def __init__(self, config: TimestepMLPConfig):
-        super().__init__()
+        super().__init__(config)
 
         self.config = config
         self.time_mlp = nn.Sequential(

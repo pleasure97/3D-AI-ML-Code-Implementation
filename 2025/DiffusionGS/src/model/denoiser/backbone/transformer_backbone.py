@@ -20,13 +20,13 @@ class BackboneConfig:
 
 class TransformerBackboneLayer(ModuleWithConfig[BackboneLayerConfig]):
     def __init__(self, config: BackboneLayerConfig):
-        super().__init__()
+        super().__init__(config)
 
         self.config = config
 
         self.timestep_mlp = TimestepMLP(self.config.timestep_mlp)
 
-        self.self_attn = nn.MultiheadAttention(self.config.attention_dim, num_heads=12)
+        self.self_attn = nn.MultiheadAttention(self.config.attention_dim, num_heads=self.config.num_heads)
 
         self.layer_norm = nn.LayerNorm(normalized_shape=self.config.attention_dim)
 
@@ -34,7 +34,7 @@ class TransformerBackboneLayer(ModuleWithConfig[BackboneLayerConfig]):
             nn.Linear(self.config.attention_dim, self.config.attention_dim * 4),
             nn.GELU(),
             nn.Dropout(p=self.config.dropout),
-            nn.Linear(self.attention_dim * 4, self.attention_dim),
+            nn.Linear(self.config.attention_dim * 4, self.config.attention_dim),
             nn.Dropout(p=self.config.dropout)
         )
 
@@ -58,14 +58,11 @@ class TransformerBackboneLayer(ModuleWithConfig[BackboneLayerConfig]):
 
 class TransformerBackbone(ModuleWithConfig[BackboneConfig]):
     def __init__(self, config: BackboneConfig):
-        super().__init__()
+        super().__init__(config)
 
         self.config = config
         self.layers = nn.ModuleList([
-            TransformerBackboneLayer(timestep_mlp=self.config.layer.timestep_mlp,
-                                     embedding_dim=self.config.layer.attention_dim,
-                                     num_heads=self.config.layer.num_heads,
-                                     dropout=self.config.layer.dropout)
+            TransformerBackboneLayer(self.config.layer)
             for _ in range(self.config.num_layers)])
 
     def forward(self, x):
