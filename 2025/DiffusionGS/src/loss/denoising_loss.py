@@ -3,7 +3,7 @@ from src.loss.base_loss import BaseLoss
 from src.dataset.types import BatchedExample
 from jaxtyping import Float
 import torch
-from torch import nn, Tensor
+from torch import nn
 import torch.nn.functional as F
 import torchvision
 

@@ -47,7 +47,7 @@ class DataModule(LightningDataModule):
 
         return DataLoader(
             dataset,
-            self.datloader_config.validation.batch_size,
+            self.dataloader_config.validation.batch_size,
             num_workers=self.dataloader_config.validation.num_workers
         )
 

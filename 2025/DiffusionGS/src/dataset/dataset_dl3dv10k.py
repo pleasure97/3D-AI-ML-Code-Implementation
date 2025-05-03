@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from .dataset_common import DatasetConfig
+from src.dataset.dataset_common import DatasetConfig
+from src.dataset.types import Stage
 from typing import Literal
 from pathlib import Path
 from torch.utils.data import Dataset
-from .types import Stage
 import torchvision.transforms
 
 @dataclass

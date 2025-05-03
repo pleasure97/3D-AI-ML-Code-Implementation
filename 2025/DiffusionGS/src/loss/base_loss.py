@@ -8,6 +8,5 @@ class BaseLoss(nn.Module, Generic[T]):
 
     def __init__(self, config) -> None:
         super().__init__()
-        self.name = self.__class__.name
         self.config: T = config
 

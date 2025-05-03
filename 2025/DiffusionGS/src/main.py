@@ -10,6 +10,9 @@ from lightning.pytorch.loggers.wandb import WandbLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from src.utils.step_tracker import StepTracker
 from lightning.pytorch import Trainer
+from loss.denoising_loss import DenoisingLoss
+from loss.novel_view_loss import NovelViewLoss
+from loss.point_distribution_loss import PointDistributionLoss
 from model.model import DiffusionGS
 from model.diffusion import DiffusionGenerator
 from model.denoiser.embedding.timestep_embedding import TimestepMLP
@@ -80,6 +83,12 @@ def train(config_dict: DictConfig):
 
     torch.manual_seed(config_dict.seed + trainer.global_rank)
 
+    losses = [
+        DenoisingLoss(config.losses.denoising),
+        NovelViewLoss(config.losses.novel_view),
+        PointDistributionLoss(config.losses.point_distribution),
+    ]
+
     diffusion_gs = DiffusionGS(
         config.optimizer,
         config.train,
@@ -91,7 +100,7 @@ def train(config_dict: DictConfig):
         TransformerBackbone(config.model.backbone),
         GaussianDecoder(config.model.object_decoder),
         GaussianDecoder(config.model.scene_decoder),
-        [BaseLoss(loss) for loss in config.losses],     # losses: list[BaseLoss],
+        losses,
         step_tracker)
 
     data_module = DataModule(config.dataset, config.dataloader, step_tracker, global_rank=trainer.global_rank)

@@ -17,7 +17,6 @@ class DatasetMVImgNetConfig(DatasetConfig):
     name: Literal["MVImgNet"]
     root: str
     max_fov: float
-    image_shape: tuple
 
 class DatasetMVImgNet(IterableDataset):
     config: DatasetMVImgNetConfig

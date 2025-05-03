@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 from torch import nn, Tensor
 from torch.optim import Adam
-from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 from src.utils.config_util import get_config
 from src.utils.step_tracker import StepTracker
 from src.utils.benchmarker import Benchmarker
@@ -171,7 +171,7 @@ class DiffusionGS(LightningModule):
 
             self.log(f"loss/{loss.name}", loss_value)
 
-        total_loss = torch.where(current_step > warmup_steps,
+        total_loss = torch.where(current_step > self.optimizer_config.warmup_steps,
                                  loss_dict["DenoisingLoss"] + loss_dict["NovelViewLoss"],
                                  loss_dict["PointDistribution"] * torch.where(self.training_config.is_object_dataset, 1,
                                                                               0))
@@ -211,12 +211,14 @@ class DiffusionGS(LightningModule):
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=self.optimizer_config.learning_rate)
-        warmup_scheduler = LambdaLR(optimizer,
-                                    lr_lambda=lambda epoch,
-                                                     warmup_iters: epoch / warmup_iters if epoch < warmup_iters else 1)
-        cosine_annealing_scheduler = CosineAnnealingLR(optimizer,
-                                                       T_max=self.optimizer_config.total_steps - self.optimizer_config.warmup_steps,
-                                                       eta_min=0)
+        warmup_scheduler = LinearLR(optimizer,
+                                    1 / self.optimizer_config.warmup_steps,
+                                    1,
+                                    self.optimizer_config.warmup_steps)
+        cosine_annealing_scheduler = CosineAnnealingLR(
+            optimizer,
+            T_max=self.optimizer_config.total_steps - self.optimizer_config.warmup_steps,
+            eta_min=0)
         scheduler = SequentialLR(optimizer,
                                  schedulers=[warmup_scheduler, cosine_annealing_scheduler],
                                  milestones=[self.optimizer_config.warmup_steps])

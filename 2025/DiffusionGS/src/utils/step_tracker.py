@@ -1,4 +1,4 @@
-from .spin_lock import SpinLock
+from src.utils.spin_lock import SpinLock
 import torch
 from jaxtyping import Int64
 from torch import Tensor
