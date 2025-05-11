@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from src.loss.base_loss import BaseLoss
 from src.model.types import Gaussians
-from src.dataset.types import BatchedExample
+from src.preprocess.types import BatchedExample
 from jaxtyping import Float
 
 

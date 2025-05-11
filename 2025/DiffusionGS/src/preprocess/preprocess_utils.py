@@ -4,7 +4,7 @@ from einops import rearrange
 import torch
 from PIL import Image
 import numpy as np
-from src.dataset.types import BatchedViews, BatchedExample
+from src.preprocess.types import BatchedViews, BatchedExample
 from rembg import remove
 
 

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from src.dataset.dataset_common import DatasetConfig
-from src.dataset.types import Stage
+from src.preprocess.dataset_common import DatasetConfig
+from src.preprocess.types import Stage
 from typing import Literal
 from pathlib import Path
 from torch.utils.data import Dataset
@@ -10,13 +10,13 @@ import torchvision.transforms
 class DatasetDL3DV10KConfig(DatasetConfig):
     name: Literal["DL3DV10K"]
     roots: list[Path]
+    u_near: float
+    u_far: float
 
 class DatasetDL3DV10K(Dataset):
     config: DatasetDL3DV10KConfig
     stage: Stage
     to_tensor: torchvision.transforms.ToTensor
-    u_near: float = 0.
-    u_far: float = 500.
 
     def __init__(self, config: DatasetDL3DV10KConfig, stage: Stage) -> None:
         super().__init__()

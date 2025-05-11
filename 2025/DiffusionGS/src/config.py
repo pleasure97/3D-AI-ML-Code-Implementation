@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Literal, Optional, TypeVar, Type
-from src.dataset.dataloader import DatasetConfig, DataLoaderConfig
+from src.preprocess.dataloader import DatasetConfig, DataLoaderConfig
 from src.model.diffusion import DiffusionGeneratorConfig
 from src.model.denoiser.embedding.timestep_embedding import TimestepMLPConfig
 from src.model.denoiser.embedding.patch_embedding import PatchMLPConfig

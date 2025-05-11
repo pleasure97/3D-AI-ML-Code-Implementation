@@ -26,21 +26,25 @@ class DataModule(LightningDataModule):
                  dataset_config: DatasetConfig,
                  dataloader_config: DataLoaderConfig,
                  step_tracker: StepTracker,
-                 global_rank: int=0):
+                 global_rank: int = 0):
         super().__init__()
+        print("[DEBUG] DataModule __init__() call")
         self.dataset_config = dataset_config
         self.dataloader_config = dataloader_config
         self.step_tracker = step_tracker
         self.global_rank = global_rank
 
     def train_dataloader(self):
+        print("[DEBUG] DataModule train_dataloader() call")
         dataset = get_dataset(self.dataset_config, "train", self.step_tracker)
-
-        return DataLoader(
+        loader = DataLoader(
             dataset,
             self.dataloader_config.train.batch_size,
             shuffle=False,
             num_workers=self.dataloader_config.train.num_workers)
+        print("[DEBUG] train batches available:", len(loader))
+
+        return loader
 
     def val_dataloader(self):
         dataset = get_dataset(self.dataset_config, "val", self.step_tracker)

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from src.dataset.dataset_common import DatasetConfig
+from src.preprocess.dataset_common import DatasetConfig
 from typing import Literal
 from pathlib import Path
 from torch.utils.data import IterableDataset
-from src.dataset.types import Stage
+from src.preprocess.types import Stage
 from src.model.denoiser.viewpoint.view_sampler import ViewSampler
 import torchvision.transforms as transforms
 import torch
@@ -22,13 +22,13 @@ class DatasetRealEstate10KConfig(DatasetConfig):
     background_color: tuple
     cameras_are_circular: bool
     max_fov: float
+    u_near: float
+    u_far: float
 
 class DatasetRealEstate10K(IterableDataset):
     config: DatasetRealEstate10KConfig
     stage: Stage
     view_sampler: ViewSampler
-    u_near: float = 0.
-    u_far: float = 500.
 
     def __init__(self,
                  config: DatasetRealEstate10KConfig,

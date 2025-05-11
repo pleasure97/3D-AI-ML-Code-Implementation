@@ -20,6 +20,18 @@ dataset:
   center_and_scale: True
   root: datasets/MVImgNet
   max_fov: 50.
+  u_near: 0.1
+  u_far: 4.2
+  view_sampler:
+    name: "view_sampler"
+    num_source_views: 32
+    num_target_views: 32
+    source_views:
+    target_views:
+    theta1: 45.
+    theta2: 60.
+    phi1: 60.
+    phi2: 75.
 
 dataloader:
   train:

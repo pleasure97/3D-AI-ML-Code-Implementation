@@ -20,8 +20,7 @@ from model.denoiser.embedding.patch_embedding import PatchMLP
 from model.denoiser.embedding.positional_embedding import PositionalEmbedding
 from model.denoiser.backbone.transformer_backbone import TransformerBackbone
 from model.decoder.decoder import GaussianDecoder
-from loss.base_loss import BaseLoss
-from dataset.dataloader import DataModule
+from preprocess.dataloader import DataModule
 
 @hydra.main(version_base=None, config_path="../config", config_name="main")
 def train(config_dict: DictConfig):

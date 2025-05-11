@@ -11,7 +11,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 from src.utils.config_util import get_config
 from src.utils.step_tracker import StepTracker
 from src.utils.benchmarker import Benchmarker
-from src.dataset.types import BatchedExample
+from src.preprocess.types import BatchedExample
 from src.model.diffusion import DiffusionGenerator
 from src.model.types import Gaussians
 from src.model.rasterizer.render import render
@@ -114,7 +114,7 @@ class DiffusionGS(LightningModule):
 
         # TODO - Preprocess the BatchedExample
         samples: list[BatchedExample] = self.sample(batch)
-        background_color = Tensor([0, 0, 0])  # TODO - if not dataset.white_background else [1, 1, 1]
+        background_color = Tensor([0, 0, 0])  # TODO - if not preprocess.white_background else [1, 1, 1]
         _, _, _, height, width = batch["target"]["image"].shape
 
         # TODO - Run the model

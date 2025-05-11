@@ -1,41 +1,50 @@
 from dataclasses import dataclass
-from src.dataset.dataset_common import DatasetConfig
+from src.preprocess.dataset_common import DatasetConfig
 from typing import Literal
 from torch.utils.data import IterableDataset
 import torch
 from torchvision.transforms import ToTensor
 import os
-import glob
+from pathlib import Path
 from PIL import Image
-from src.dataset.types import Stage
+from src.preprocess.types import Stage
 from src.model.denoiser.viewpoint.view_sampler import ViewSampler
 from src.utils.geometry_util import convert_cameras_bin, convert_images_bin, make_rotation_matrix
-from src.dataset.preprocessing.preprocess_utils import crop_example
+from src.preprocess.preprocess_utils import crop_example
 
 @dataclass
 class DatasetMVImgNetConfig(DatasetConfig):
     name: Literal["MVImgNet"]
     root: str
     max_fov: float
+    u_near: float
+    u_far: float
 
 class DatasetMVImgNet(IterableDataset):
     config: DatasetMVImgNetConfig
     stage: Stage
     view_sampler: ViewSampler
-    u_near: float = 0.1
-    u_far: float = 4.2
 
-    def __init__(self, config: DatasetMVImgNetConfig, stage: Stage) -> None:
+    def __init__(self,
+                 config: DatasetMVImgNetConfig,
+                 stage: Stage,
+                 view_sampler: ViewSampler) -> None:
         super().__init__()
         self.config = config
         self.stage = stage
-        self.view_sample = ViewSampler
+        self.view_sampler = view_sampler
 
-        scenes = os.path.join(self.config.root, "*", "*")
-        self.scenes = sorted(glob.glob(scenes))
+        print("[DEBUG] self.config.root:", self.config.root)
+        root = Path(self.config.root)
+        scenes = list(root.glob("*/*"))
+        print("[DEBUG] scenes:", scenes)
+        self.scenes = [scene for scene in scenes if (scene / "sparse" / "0").is_dir()]
+        print("[DEBUG] found datasets:", len(self.scenes))
 
         if self.stage in ("train", "val"):
             self.scenes = [self.scenes[i] for i in torch.randperm(len(self.scenes))]
+
+        print("[DEBUG] total scenes:", len(self.scenes))
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
@@ -43,6 +52,8 @@ class DatasetMVImgNet(IterableDataset):
         if worker_info is not None:
             num_workers, worker_id = worker_info.num_workers, worker_info.id
             self.scenes = (scene for i, scene in enumerate(self.scenes) if i % num_workers == worker_id)
+
+        print("[DEBUG] total scenes:", len(self.scenes))
 
         for scene in self.scenes:
             # Read COLMAP Binaries
@@ -91,16 +102,16 @@ class DatasetMVImgNet(IterableDataset):
                     "extrinsics": extrinsics[source_indices],
                     "intrinsics": intrinsics[source_indices],
                     "image": images[source_indices],
-                    "near": self.u_near,
-                    "far": self.u_far,
+                    "near": self.config.u_near,
+                    "far": self.config.u_far,
                     "indices": source_indices
                 },
                 "target": {
                     "extrinsics": extrinsics[target_indices],
                     "intrinsics": intrinsics[target_indices],
                     "image": images[target_indices],
-                    "near": self.u_near,
-                    "far": self.u_far,
+                    "near": self.config.u_near,
+                    "far": self.config.u_far,
                     "indices": target_indices
                 },
                 "scene": scene
@@ -108,5 +119,5 @@ class DatasetMVImgNet(IterableDataset):
 
             yield crop_example(example, tuple(self.config.image_shape))
 
-    def __len__(self) -> int:
+    def __len__(self):
         return len(self.scenes)

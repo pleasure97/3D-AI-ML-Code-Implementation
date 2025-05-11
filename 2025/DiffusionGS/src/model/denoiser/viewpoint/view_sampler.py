@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Literal
-from src.dataset.types import Stage
+from src.preprocess.types import Stage
 from src.utils.step_tracker import StepTracker
 from jaxtyping import Float, Int64
 import torch
@@ -24,13 +24,11 @@ class ViewSamplerConfig:
 class ViewSampler:
     config: ViewSamplerConfig
     stage: Stage
-    cameras_are_circular: bool
     step_tracker: StepTracker | None
 
-    def __init__(self, config: ViewSamplerConfig, stage: Stage, cameras_are_circular: bool, step_tracker: StepTracker) -> None:
+    def __init__(self, config: ViewSamplerConfig, stage: Stage, step_tracker: StepTracker) -> None:
         self.config = config
         self.stage = stage
-        self.cameras_are_circular = cameras_are_circular
         self.step_tracker = step_tracker
 
     @staticmethod

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 import objaverse
-from src.dataset.dataset_common import DatasetConfig
+from src.preprocess.dataset_common import DatasetConfig
 from typing import Literal, List, Set
 from torch.utils.data import IterableDataset
-from src.dataset.types import Stage
+from src.preprocess.types import Stage
 from src.model.denoiser.viewpoint.view_sampler import ViewSampler
 import torch
 from jaxtyping import Float, UInt8
@@ -11,7 +11,7 @@ from torch import Tensor
 from PIL import Image
 from io import BytesIO
 import torchvision.transforms as transforms
-from src.dataset.preprocessing.preprocess_utils import crop_example
+from src.preprocess.preprocess_utils import crop_example
 import os
 import json
 
@@ -23,6 +23,8 @@ class DatasetObjaverseConfig(DatasetConfig):
     max_fov: float
     download_processes: int
     image_shape: tuple
+    u_near: float
+    u_far: float
 
 
 class DatasetObjaverse(IterableDataset):
@@ -30,11 +32,10 @@ class DatasetObjaverse(IterableDataset):
     stage: Stage
     view_sampler: ViewSampler
     chunks: list
-    u_near: float = 0.1
-    u_far: float = 4.2
 
     def __init__(self, config: DatasetObjaverseConfig, stage: Stage, view_sampler) -> None:
         super().__init__()
+        print(f"[DEBUG] pending_uids ({len(self.pending_uids)}): {self.pending_uids[:5]} …")
         self.config = config
         self.stage = stage
         self.view_sampler = view_sampler
@@ -91,6 +92,7 @@ class DatasetObjaverse(IterableDataset):
         return torch.stack(outputs)
 
     def __iter__(self):
+        print("[DEBUG] __iter__ called")
         worker_info = torch.utils.data.get_worker_info()
 
         if worker_info is not None:
@@ -138,6 +140,5 @@ class DatasetObjaverse(IterableDataset):
 
                 yield crop_example(example, tuple(self.config.image_shape))
 
-    def __len__(self) -> int:
-        return len(self.pending_uids)
-
+    def __len__(self):
+        return len(self.chunks)
