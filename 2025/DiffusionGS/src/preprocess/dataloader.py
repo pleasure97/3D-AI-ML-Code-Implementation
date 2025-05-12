@@ -28,7 +28,6 @@ class DataModule(LightningDataModule):
                  step_tracker: StepTracker,
                  global_rank: int = 0):
         super().__init__()
-        print("[DEBUG] DataModule __init__() call")
         self.dataset_config = dataset_config
         self.dataloader_config = dataloader_config
         self.step_tracker = step_tracker

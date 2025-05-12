@@ -34,35 +34,29 @@ class DatasetMVImgNet(IterableDataset):
         self.stage = stage
         self.view_sampler = view_sampler
 
-        print("[DEBUG] self.config.root:", self.config.root)
         root = Path(self.config.root)
         scenes = list(root.glob("*/*"))
-        print("[DEBUG] scenes:", scenes)
         self.scenes = [scene for scene in scenes if (scene / "sparse" / "0").is_dir()]
-        print("[DEBUG] found datasets:", len(self.scenes))
 
         if self.stage in ("train", "val"):
             self.scenes = [self.scenes[i] for i in torch.randperm(len(self.scenes))]
-
-        print("[DEBUG] total scenes:", len(self.scenes))
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
 
         if worker_info is not None:
             num_workers, worker_id = worker_info.num_workers, worker_info.id
-            self.scenes = (scene for i, scene in enumerate(self.scenes) if i % num_workers == worker_id)
+            stream = (scene for i, scene in enumerate(self.scenes) if i % num_workers == worker_id)
+        else:
+            stream = iter(self.scenes)
 
-        print("[DEBUG] total scenes:", len(self.scenes))
-
-        for scene in self.scenes:
+        for scene in stream:
             # Read COLMAP Binaries
             sparse_directory = os.path.join(scene, "sparse", "0")
-            cameras = convert_cameras_bin(os.path.join(sparse_directory, "cameras.bin"))
-            images = convert_images_bin(os.path.join(sparse_directory, "images.bin"))
+            cameras_dict = convert_cameras_bin(os.path.join(sparse_directory, "cameras.bin"))
+            images_dict = convert_images_bin(os.path.join(sparse_directory, "images.bin"))
 
-            view_ids = sorted(images.keys())
-            num_views = len(view_ids)
+            view_ids = sorted(images_dict.keys())
 
             images = []
             extrinsics = []
@@ -70,24 +64,19 @@ class DatasetMVImgNet(IterableDataset):
 
             for view_id in view_ids:
                 # Extrinsic
-                quaternion, translation, camera_id, name, _ = images[view_id]
-                rotation_matrix = make_rotation_matrix(quaternion)
-                # TODO - Check Device
-                translation_vector = torch.tensor(translation, dtype=torch.float32)
-                extrinsic = torch.eye(4, dtype=torch.float32)
-                extrinsic[:3, :3], extrinsic[:3, 3] = rotation_matrix, translation_vector
+                camera_id, rotation_matrix, translation_vector, name = images_dict[view_id]
+                extrinsic = torch.eye(4)
+                extrinsic[:3, :3] = torch.from_numpy(rotation_matrix)
+                extrinsic[:3, 3] = torch.from_numpy(translation_vector)
                 extrinsics.append(extrinsic)
 
                 # Intrinsic
-                model, width, height, parameters = cameras[camera_id]
-                focal_x, focal_y, center_x, center_y = parameters[0], parameters[0], parameters[1], parameters[2]
-                # TODO - Check Device
-                intrinsic = torch.eye(3, dtype=torch.float32)
-                intrinsic[0, 0], intrinsic[0, 1] = focal_x, focal_y
-                intrinsic[0, 2], intrinsic[1, 2] = center_x, center_y
-                intrinsics.append(intrinsic)
+                intrinsic, _, _ = cameras_dict[camera_id]
+                intrinsics.append(torch.from_numpy(intrinsic))
 
-                image_path = os.path.join(scene, "images", name)
+                # File Name
+                file_name = f"{view_id:03d}.jpg"
+                image_path = os.path.join(scene, "images", file_name)
                 pil = Image.open(image_path).convert("RGB")
                 images.append(ToTensor()(pil))
 

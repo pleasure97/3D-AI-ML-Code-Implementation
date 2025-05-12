@@ -1,3 +1,5 @@
+import os
+
 import torch
 from jaxtyping import Float
 from torch import Tensor
@@ -67,11 +69,25 @@ def make_SfM_points(image_path: Path):
 
     return sfm_path
 
+def inspect_cameras_bin(path, n_bytes=64):
+    path = Path(path)
+    data = path.read_bytes()[:n_bytes]
+    print(f"File: {path}")
+    print(f"Read {len(data)} bytes:")
+    print(data.hex(" "))
+    if len(data) >= 8:
+        print("First Q (num_cameras):", struct.unpack("<Q", data[:8])[0])
 
-def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="c"):
+def read_next_bytes(fid,
+                    format_char_sequence: str,
+                    endian_character: str = "<"):
     """ Read and unpack the next bytes from a binary file. """
-    data = fid.read(num_bytes)
-    return struct.unpack(endian_character + format_char_sequence, data)
+    byte_format = endian_character + format_char_sequence
+    byte_size = struct.calcsize(byte_format)
+    data = fid.read(byte_size)
+    if len(data) != byte_size:
+        raise IOError(f"Expected {byte_size} bytes, got {len(data)} bytes")
+    return struct.unpack(byte_format, data)
 
 
 def convert_cameras_bin(cameras_path: str | Path):
@@ -79,19 +95,19 @@ def convert_cameras_bin(cameras_path: str | Path):
     cameras = {}
 
     with open(cameras_path, "rb") as fid:
-        num_cameras = read_next_bytes(fid, 8, "Q")[0]
+        num_cameras = read_next_bytes(fid, "Q")[0]
         for _ in range(num_cameras):
-            camera_id, model_id, width, height, *params = read_next_bytes(fid, 24, "iiQQ")
-            params = np.array(params)
+            camera_id, model_id = read_next_bytes(fid, "ii")
+            width, height = read_next_bytes(fid, "QQ")
 
             if model_id == 1:  # Simple Pinhole
-                focal_length, center_x, center_y = params
+                focal_length, center_x, center_y = read_next_bytes(fid, "ddd")
                 intrinsics = np.array([
                     [focal_length, 0, center_x],
                     [0, focal_length, center_y],
                     [0, 0, 1]])
             elif model_id == 2:  # Pinhole
-                focal_length_x, focal_length_y, center_x, center_y = params
+                focal_length_x, focal_length_y, center_x, center_y = read_next_bytes(fid, "dddd")
                 intrinsics = np.array([
                     [focal_length_x, 0, center_x],
                     [0, focal_length_y, center_y],
@@ -107,12 +123,23 @@ def convert_images_bin(images_path: str | Path):
     images = {}
 
     with open(images_path, "rb") as fid:
-        num_images = read_next_bytes(fid, 8, "Q")[0]
+        num_images = read_next_bytes(fid, "Q")[0]
         for _ in range(num_images):
             # q - quaternion / t - translation
-            image_id, q_w, q_x, q_y, q_z, t_x, t_y, t_z, camera_id, name_len = read_next_bytes(fid, 64, "i dddddd i i")
-            name = fid.read(name_len).decode("utf-8")
-            _ = read_next_bytes(fid, 8, "Q")[0]
+            image_id, q_w, q_x, q_y, q_z, t_x, t_y, t_z, camera_id, name_len = read_next_bytes(fid, "i ddddddd i i")
+            name_bytes = bytearray()
+            while True:
+                b = fid.read(1)
+                if not b or b == b"\x00":
+                    break
+                name_bytes += b
+            try:
+                name = name_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                name = name_bytes.decode("latin-1")
+            # Each point consists of x (double), y (double), point3d_id (uint64)
+            num_points2D = read_next_bytes(fid, "Q")[0]
+            fid.seek(num_points2D * (8 + 8 + 8), os.SEEK_CUR)
 
             # Convert Quaternion to Rotation Matrix
             q = np.array([q_w, q_x, q_y, q_z])
