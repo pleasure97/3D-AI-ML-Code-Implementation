@@ -1,8 +1,9 @@
 name: MVImgNet
-path: datasets/MVImgNet
+path: outputs
 image_shape: [180, 320]
-remove_background: true
-center_and_scale: true
+remove_background: True
+center_and_scale: True
+root: datasets/MVImgNet
 max_fov: 50.
-num_images_to_render: 32
-download_processes: 12
+u_near: 0.1
+u_far: 4.2

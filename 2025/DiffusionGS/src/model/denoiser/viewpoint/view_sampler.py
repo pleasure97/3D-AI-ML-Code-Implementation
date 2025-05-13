@@ -32,7 +32,7 @@ class ViewSampler:
         self.step_tracker = step_tracker
 
     @staticmethod
-    def compute_angle_between(self, vector1: Tensor, vector2: Tensor) -> Tensor:
+    def compute_angle_between(vector1: Tensor, vector2: Tensor) -> Tensor:
         vector1 = F.normalize(vector1, dim=-1)
         vector2 = F.normalize(vector2, dim=-1)
         dot_product = torch.sum(vector1 * vector2, dim=-1).clamp(-1., 1.)
@@ -43,6 +43,7 @@ class ViewSampler:
                device: torch.device = "cuda" if torch.cuda.is_available() else "cpu") \
             -> tuple[Int64[Tensor, " source_view"], Int64[Tensor, " target_view"]]:
         num_views = extrinsics.shape[0]
+        print("num views : ", num_views)
 
         # Extract Camera Location and Direction Vector
         camera_position = extrinsics[:, :3, 3]
@@ -57,13 +58,15 @@ class ViewSampler:
         theta1 = torch.deg2rad(torch.tensor(self.config.theta1, device=device))
         theta2 = torch.deg2rad(torch.tensor(self.config.theta2, device=device))
 
-        positions_angles = self.compute_angle_between(camera_position - condition_position,
-                                                      torch.zeros_like(camera_position, device=device))
-
         # Filter based on Direction (phi1, phi2)
         phi1 = torch.deg2rad(torch.tensor(self.config.phi1, device=device))
         phi2 = torch.deg2rad(torch.tensor(self.config.phi2, device=device))
 
+        # Compute Position Angles
+        positions_angles = self.compute_angle_between(camera_position - condition_position,
+                                                      torch.zeros_like(camera_position, device=device))
+
+        # Compute Forward Direction Angles
         forward_angles = self.compute_angle_between(camera_forward, condition_direction.expand_as(camera_forward))
 
         # Noisy Views
@@ -73,6 +76,13 @@ class ViewSampler:
         # Novel Views
         valid_target_mask = (positions_angles <= theta2) & (forward_angles <= phi2)
         valid_target_indices = torch.where(valid_target_mask)[0]
+
+        print(f"phi1 : {self.config.phi1}, phi2 : {self.config.phi2}")
+        print(f"theta1 : {self.config.theta1}, theta2 : {self.config.theta2}")
+        if valid_source_indices.numel() == 0:
+            print("valid source indices are None")
+        if valid_target_indices.numel() == 0:
+            print("valid target indices are None")
 
         source_index = valid_source_indices[torch.randperm(len(valid_source_indices))][:self.config.num_source_views]
         target_index = valid_target_indices[torch.randperm(len(valid_target_indices))][:self.config.num_target_views]

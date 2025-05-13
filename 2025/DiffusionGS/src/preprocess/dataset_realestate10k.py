@@ -22,8 +22,6 @@ class DatasetRealEstate10KConfig(DatasetConfig):
     background_color: tuple
     cameras_are_circular: bool
     max_fov: float
-    u_near: float
-    u_far: float
 
 class DatasetRealEstate10K(IterableDataset):
     config: DatasetRealEstate10KConfig

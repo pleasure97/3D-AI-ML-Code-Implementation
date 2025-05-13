@@ -17,8 +17,6 @@ class DatasetMVImgNetConfig(DatasetConfig):
     name: Literal["MVImgNet"]
     root: str
     max_fov: float
-    u_near: float
-    u_far: float
 
 class DatasetMVImgNet(IterableDataset):
     config: DatasetMVImgNetConfig
@@ -28,11 +26,13 @@ class DatasetMVImgNet(IterableDataset):
     def __init__(self,
                  config: DatasetMVImgNetConfig,
                  stage: Stage,
-                 view_sampler: ViewSampler) -> None:
+                 view_sampler: ViewSampler,
+                 device: torch.device = "cuda" if torch.cuda.is_available() else "cpu") -> None:
         super().__init__()
         self.config = config
         self.stage = stage
         self.view_sampler = view_sampler
+        self.device = device
 
         root = Path(self.config.root)
         scenes = list(root.glob("*/*"))
@@ -65,20 +65,20 @@ class DatasetMVImgNet(IterableDataset):
             for view_id in view_ids:
                 # Extrinsic
                 camera_id, rotation_matrix, translation_vector, name = images_dict[view_id]
-                extrinsic = torch.eye(4)
+                extrinsic = torch.eye(4, device=self.device)
                 extrinsic[:3, :3] = torch.from_numpy(rotation_matrix)
                 extrinsic[:3, 3] = torch.from_numpy(translation_vector)
                 extrinsics.append(extrinsic)
 
                 # Intrinsic
                 intrinsic, _, _ = cameras_dict[camera_id]
-                intrinsics.append(torch.from_numpy(intrinsic))
+                intrinsics.append(torch.from_numpy(intrinsic).to(self.device))
 
                 # File Name
                 file_name = f"{view_id:03d}.jpg"
                 image_path = os.path.join(scene, "images", file_name)
                 pil = Image.open(image_path).convert("RGB")
-                images.append(ToTensor()(pil))
+                images.append(ToTensor()(pil).to(self.device))
 
             extrinsics = torch.stack(extrinsics, dim=0)
             intrinsics = torch.stack(intrinsics, dim=0)

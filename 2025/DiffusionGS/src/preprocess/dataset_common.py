@@ -10,4 +10,6 @@ class DatasetConfig:
     center_and_scale: bool
     root: str
     view_sampler: ViewSamplerConfig
+    u_near: float
+    u_far: float
 

@@ -22,6 +22,7 @@ from model.denoiser.backbone.transformer_backbone import TransformerBackbone
 from model.decoder.decoder import GaussianDecoder
 from preprocess.dataloader import DataModule
 
+
 @hydra.main(version_base=None, config_path="../config", config_name="main")
 def train(config_dict: DictConfig):
     config = load_root_config(config_dict)

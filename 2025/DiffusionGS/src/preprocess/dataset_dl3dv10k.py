@@ -10,8 +10,7 @@ import torchvision.transforms
 class DatasetDL3DV10KConfig(DatasetConfig):
     name: Literal["DL3DV10K"]
     roots: list[Path]
-    u_near: float
-    u_far: float
+
 
 class DatasetDL3DV10K(Dataset):
     config: DatasetDL3DV10KConfig
