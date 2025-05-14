@@ -9,8 +9,9 @@ from pathlib import Path
 from PIL import Image
 from src.preprocess.types import Stage
 from src.model.denoiser.viewpoint.view_sampler import ViewSampler
-from src.utils.geometry_util import convert_cameras_bin, convert_images_bin, make_rotation_matrix
+from src.utils.geometry_util import convert_cameras_bin, convert_images_bin
 from src.preprocess.preprocess_utils import crop_example
+from src.model.denoiser.viewpoint.RPPC import reference_point_plucker_embedding
 
 @dataclass
 class DatasetMVImgNetConfig(DatasetConfig):
@@ -80,11 +81,25 @@ class DatasetMVImgNet(IterableDataset):
                 pil = Image.open(image_path).convert("RGB")
                 images.append(ToTensor()(pil).to(self.device))
 
+            # View Sampler
             extrinsics = torch.stack(extrinsics, dim=0)
             intrinsics = torch.stack(intrinsics, dim=0)
             images = torch.stack(images, dim=0)
 
             source_indices, target_indices = self.view_sampler.sample(extrinsics)
+
+            # RPPC
+            C2Ws = torch.inverse(extrinsics)
+            RPPCs_source = reference_point_plucker_embedding(
+                self.config.image_shape[0],
+                self.config.image_shape[1],
+                intrinsics[source_indices],
+                C2Ws[source_indices])
+            RPPCs_target = reference_point_plucker_embedding(
+                self.config.image_shape[0],
+                self.config.image_shape[1],
+                intrinsics[target_indices],
+                C2Ws[target_indices])
 
             example = {
                 "source": {
@@ -93,7 +108,8 @@ class DatasetMVImgNet(IterableDataset):
                     "image": images[source_indices],
                     "near": self.config.u_near,
                     "far": self.config.u_far,
-                    "indices": source_indices
+                    "indices": source_indices,
+                    "rppc": RPPCs_source
                 },
                 "target": {
                     "extrinsics": extrinsics[target_indices],
@@ -101,7 +117,8 @@ class DatasetMVImgNet(IterableDataset):
                     "image": images[target_indices],
                     "near": self.config.u_near,
                     "far": self.config.u_far,
-                    "indices": target_indices
+                    "indices": target_indices,
+                    "rppc": RPPCs_target
                 },
                 "scene": scene
             }

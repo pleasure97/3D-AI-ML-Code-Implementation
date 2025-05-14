@@ -126,9 +126,10 @@ class DiffusionGS(LightningModule):
             for sample in samples:
                 noisy_image = noisy_images[timestep]
 
+                RPPC = batch["target"]["rppc"]
                 timestep_mlp_output = self.timestep_mlp(timestep)
                 transformer_backbone_input = self.patch_mlp(sample["target"]) + self.positional_embedding
-                transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep)
+                transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep, RPPC)
                 positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output,
                                                                                   transformer_backbone_output)
 

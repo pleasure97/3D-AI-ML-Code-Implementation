@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import Literal
 from src.model import ModuleWithConfig
 from src.model.denoiser.embedding.timestep_embedding import TimestepMLP, TimestepMLPConfig
-from src.model.denoiser.viewpoint.RPPC import reference_point_plucker_embedding
 import torch.nn as nn
 
 @dataclass
@@ -38,20 +37,23 @@ class TransformerBackboneLayer(ModuleWithConfig[BackboneLayerConfig]):
             nn.Dropout(p=self.config.dropout)
         )
 
-    def forward(self, x, timestep):
-        reference_point_plucker_embedding(height, width, intrinsics, c2w)
+    def forward(self, x, timestep, rppc):
         # timestep_embedding : [batch_size, 1, embedding_dim]
         timestep_embedding = self.timestep_mlp(timestep)
-        x = x + timestep_embedding  # [batch_size, num_patches, embedding_dim]
+        # TODO - Change Variable Name
+        B, D, H, W = rppc.shape
+        N = H * W
+        rppc_view = rppc.view(B, D, N).permute(0, 2, 1)
+        x = x + timestep_embedding + rppc_view  # [batch_size, num_patches, embedding_dim]
         x = x.transpose(0, 1)  # [num_patches, batch_size, embedding_dim]
         attn_output, _ = self.self_attn(x, x, x)
         x = x + attn_output
         x = x.transpose(0, 1)  # [batch_size, num_patches, embedding_dim]
         x = self.layer_norm(x)
 
-        x = x + timestep_embedding
+        x = x + timestep_embedding + rppc_view
         mlp_output = self.mlp(x)
-        x = self.layer_norm(x)
+        x = self.layer_norm(mlp_output)
 
         return x
 
