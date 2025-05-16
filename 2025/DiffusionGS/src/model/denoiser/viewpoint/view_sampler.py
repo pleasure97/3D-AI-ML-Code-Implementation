@@ -36,11 +36,11 @@ class ViewSampler:
         vector1 = F.normalize(vector1, dim=-1)
         vector2 = F.normalize(vector2, dim=-1)
         dot_product = torch.sum(vector1 * vector2, dim=-1).clamp(-1., 1.)
-        return torch.rad2deg(torch.acos(dot_product))
+        return torch.acos(dot_product)
 
     def sample(self,
                extrinsics: Float[Tensor, "view 4 4"],
-               device: torch.device = "cuda" if torch.cuda.is_available() else "cpu") \
+               device: torch.device = "cpu") \
             -> tuple[Int64[Tensor, " source_view"], Int64[Tensor, " target_view"]]:
         num_views = extrinsics.shape[0]
         print("num views : ", num_views)
@@ -64,7 +64,7 @@ class ViewSampler:
 
         # Compute Position Angles
         positions_angles = self.compute_angle_between(camera_position - condition_position,
-                                                      torch.zeros_like(camera_position, device=device))
+                                                      torch.zeros_like(camera_position))
 
         # Compute Forward Direction Angles
         forward_angles = self.compute_angle_between(camera_forward, condition_direction.expand_as(camera_forward))
@@ -77,15 +77,28 @@ class ViewSampler:
         valid_target_mask = (positions_angles <= theta2) & (forward_angles <= phi2)
         valid_target_indices = torch.where(valid_target_mask)[0]
 
-        print(f"phi1 : {self.config.phi1}, phi2 : {self.config.phi2}")
-        print(f"theta1 : {self.config.theta1}, theta2 : {self.config.theta2}")
         if valid_source_indices.numel() == 0:
             print("valid source indices are None")
+            valid_source_indices = torch.randint(0, num_views, (1,), device=device)
         if valid_target_indices.numel() == 0:
             print("valid target indices are None")
+            if valid_source_indices.numel() > 0:
+                valid_index = torch.randint(0, valid_source_indices.numel(), (1,), device=device)
+                valid_target_indices = valid_source_indices[valid_index]
+            else:
+                valid_target_indices = torch.randint(0, num_views, (1,), device=device)
 
-        source_index = valid_source_indices[torch.randperm(len(valid_source_indices))][:self.config.num_source_views]
-        target_index = valid_target_indices[torch.randperm(len(valid_target_indices))][:self.config.num_target_views]
+        if valid_source_indices.numel() >= self.config.num_source_views:
+            source_index = valid_source_indices[torch.randperm(valid_source_indices.numel(), device=device)][:self.config.num_source_views]
+        else:
+            choices = torch.randint(0, valid_source_indices.numel(), (self.config.num_source_views,), device=device)
+            source_index = valid_source_indices[choices]
+
+        if valid_target_indices.numel() >= self.config.num_target_views:
+            target_index = valid_target_indices[torch.randperm(valid_target_indices.numel(), device=device)][:self.config.num_target_views]
+        else:
+            choices = torch.randint(0, valid_target_indices.numel(), (self.config.num_target_views,), device=device)
+            target_index = valid_target_indices[choices]
 
         return source_index, target_index
 

@@ -28,10 +28,10 @@ dataset:
     num_target_views: 32
     source_views:
     target_views:
-    theta1: 45.
-    theta2: 60.
-    phi1: 60.
-    phi2: 75.
+    theta1: 0.
+    theta2: 90.
+    phi1: 0.
+    phi2: 90.
 
 dataloader:
   train:

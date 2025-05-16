@@ -8,7 +8,10 @@ def get_rays(height, width, intrinsics, c2w, jitter=False):
       intrinsics : 4 by 4 intrinsic matrix
       c2w : 4 by 4 camera to world extrinsic matrix
     """
-    u, v = torch.meshgrid(torch.arange(width, device=c2w.device), torch.arange(height, device=c2w.device), indexing="ij")
+    u, v = torch.meshgrid(
+        torch.arange(width, dtype=torch.float32, device=c2w.device),
+        torch.arange(height, dtype=torch.float32, device=c2w.device),
+        indexing="ij")
     B = c2w.shape[0]
     u, v = u.reshape(-1), v.reshape(-1)
     u_noise = v_noise = 0.5
@@ -16,8 +19,10 @@ def get_rays(height, width, intrinsics, c2w, jitter=False):
         u_noise = torch.rand(u.shape, device=c2w.device)
         v_noise = torch.rand(v.shape, device=c2w.device)
     u, v = u + u_noise, v + v_noise  # add half pixel
-    pixels = torch.stack((u, v, torch.ones_like(u)), dim=0)  # (3, H * W)
+    pixels = torch.stack((u, v, torch.ones_like(u, dtype=torch.float32)), dim=0)  # (3, H * W)
     pixels = pixels.unsqueeze(0).repeat(B, 1, 1)  # (B, 3 , H * W)
+
+    intrinsics = intrinsics.to(torch.float32)
     if intrinsics.sum() == 0:
         inv_intrinsics = torch.eye(3, device=c2w.device).tile(B, 1, 1)
     else:

@@ -28,7 +28,7 @@ class DatasetMVImgNet(IterableDataset):
                  config: DatasetMVImgNetConfig,
                  stage: Stage,
                  view_sampler: ViewSampler,
-                 device: torch.device = "cuda" if torch.cuda.is_available() else "cpu") -> None:
+                 device: torch.device = "cpu") -> None:
         super().__init__()
         self.config = config
         self.stage = stage
@@ -120,7 +120,7 @@ class DatasetMVImgNet(IterableDataset):
                     "indices": target_indices,
                     "rppc": RPPCs_target
                 },
-                "scene": scene
+                "scene": str(scene),
             }
 
             yield crop_example(example, tuple(self.config.image_shape))
