@@ -34,6 +34,7 @@ class CheckpointConfig:
 @dataclass
 class TrainerConfig:
     max_steps: int
+    precision: int
     validation_check_interval: int | float | None
     gradient_clip_validation: int | float | None
 

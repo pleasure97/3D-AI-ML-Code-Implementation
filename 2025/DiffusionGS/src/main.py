@@ -76,6 +76,7 @@ def train(config_dict: DictConfig):
         logger=logger,
         devices="auto",
         callbacks=callbacks,
+        precision=config.trainer.precision,
         val_check_interval=config.trainer.validation_check_interval,
         enable_progress_bar=True,
         gradient_clip_val=config.trainer.gradient_clip_validation,

@@ -43,7 +43,6 @@ class ViewSampler:
                device: torch.device = "cpu") \
             -> tuple[Int64[Tensor, " source_view"], Int64[Tensor, " target_view"]]:
         num_views = extrinsics.shape[0]
-        print("num views : ", num_views)
 
         # Extract Camera Location and Direction Vector
         camera_position = extrinsics[:, :3, 3]
@@ -78,7 +77,7 @@ class ViewSampler:
         valid_target_indices = torch.where(valid_target_mask)[0]
 
         if valid_source_indices.numel() == 0:
-            print("valid source indices are None")
+            print(f"valid source indices {valid_source_indices} are None")
             valid_source_indices = torch.randint(0, num_views, (1,), device=device)
         if valid_target_indices.numel() == 0:
             print("valid target indices are None")

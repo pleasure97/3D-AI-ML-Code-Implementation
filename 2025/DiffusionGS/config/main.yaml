@@ -35,15 +35,15 @@ dataset:
 
 dataloader:
   train:
-    batch_size: 16
+    batch_size: 8
     num_workers: 8
     seed: 1234
   test:
-    batch_size: 16
+    batch_size: 8
     num_workers: 4
     seed: 1234
   validation:
-    batch_size: 16
+    batch_size: 8
     num_workers: 1
     seed: 1234
 
@@ -131,7 +131,8 @@ checkpoint:
 
 trainer:
   max_steps: -1
-  validation_check_interval: 200
+  precision: 16
+  validation_check_interval: 0
   gradient_clip_validation: 0.5
 
 losses:

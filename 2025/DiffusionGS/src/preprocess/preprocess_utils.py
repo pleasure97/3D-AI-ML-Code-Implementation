@@ -49,7 +49,6 @@ def crop_and_scale(
         intrinsics: Float[Tensor, "*#batch 3 3"],
         shape: tuple[int, int]
 ) -> tuple[Float[Tensor, "*#batch channel height_out width_out"], Float[Tensor, "*#batch 3 3"]]:
-    print(">> batch size:", images.shape[0])
     *_, height_in, width_in = images.shape
     height_out, width_out = shape
     assert height_out <= height_in and width_out <= width_in

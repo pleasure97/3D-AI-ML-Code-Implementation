@@ -82,27 +82,6 @@ class DiffusionGS(LightningModule):
         self.patch_mlp = patch_mlp
         self.positional_embedding = positional_embedding
 
-        # def rescale(
-        #         image: Float[Tensor, "3 height width"],
-        #         shape: tuple[int, int]) -> Float[Tensor, "3 height width"]:
-        #
-        # def center_crop(
-        #         images: Float[Tensor, "*#batch channel height width"],
-        #         intrinsics: Float[Tensor, "*batch 3 3"],
-        #         shape: tuple[int, int]
-        # ) -> tuple[Float[Tensor, "*#batch channel height_out width_out"], Float[Tensor, "*#batch 3 3"]]:
-        #
-        # def crop_and_scale(
-        #         images: Float[Tensor, "*#batch channel height width"],
-        #         intrinsics: Float[Tensor, "*#batch 3 3"],
-        #         shape: tuple[int, int]
-        # ) -> tuple[Float[Tensor, "*#batch channel height_out width_out"], Float[Tensor, "*#batch 3 3"]]:
-        #
-        # def crop_views(views: BatchedViews, shape: tuple[int, int]) -> BatchedViews:
-        #
-        # def crop_example(example: BatchedExample, shape: tuple[int, int]) -> BatchedExample:
-        # def remove_background(images: Float[Tensor, "*#batch channel height width"]):
-
         self.transformer_backbone = transformer_backbone
         self.object_decoder = object_decoder
         self.scene_decoder = scene_decoder
@@ -113,7 +92,6 @@ class DiffusionGS(LightningModule):
         warmup_steps = self.optimizer_config.warmup_steps
 
         # TODO - Preprocess the BatchedExample
-        samples: list[BatchedExample] = self.sample(batch)
         background_color = Tensor([0, 0, 0])  # TODO - if not preprocess.white_background else [1, 1, 1]
         _, _, _, height, width = batch["target"]["image"].shape
 
@@ -123,7 +101,7 @@ class DiffusionGS(LightningModule):
         noisy_images = self.diffusion_generator.generate(batch)
         for timestep in reversed(
                 range(self.diffusion_generator.total_timesteps, self.diffusion_generator.num_timesteps)):
-            for sample in samples:
+            for sample in batch:
                 noisy_image = noisy_images[timestep]
 
                 RPPC = batch["target"]["rppc"]
@@ -190,8 +168,6 @@ class DiffusionGS(LightningModule):
 
     @rank_zero_only
     def validation_step(self, batch, batch_index):
-        batch: BatchedExample = self.sample(batch)
-
         if self.global_rank == 0:
             print(
                 f"validation step {self.global_step}; "
@@ -199,8 +175,7 @@ class DiffusionGS(LightningModule):
                 f"source = {batch['source']['index'].tolist()}")
 
     def test_step(self, batch, batch_index):
-        sample: list[BatchedExample] = self.sample(batch)
-        batch_size, _, _, height, width = sample["target"]["image"].shape
+        batch_size, _, _, height, width = batch["target"]["image"].shape
         assert batch_size == 1
         if batch_index % 100 == 0:
             print(f"Test Step {batch_index}")
