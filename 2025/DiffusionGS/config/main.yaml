@@ -28,23 +28,23 @@ dataset:
     num_target_views: 32
     source_views:
     target_views:
-    theta1: 0.
+    theta1: 90.
     theta2: 90.
-    phi1: 0.
+    phi1: 90.
     phi2: 90.
 
 dataloader:
   train:
     batch_size: 8
-    num_workers: 8
+    num_workers: 0
     seed: 1234
   test:
     batch_size: 8
-    num_workers: 4
+    num_workers: 0
     seed: 1234
   validation:
     batch_size: 8
-    num_workers: 1
+    num_workers: 0
     seed: 1234
 
 model:

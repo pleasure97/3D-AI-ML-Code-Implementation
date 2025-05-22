@@ -52,6 +52,8 @@ class ViewSampler:
         condition_index = torch.randint(0, num_views, (1,), device=device).item()
         condition_position = camera_position[condition_index]
         condition_direction = camera_forward[condition_index]
+        expanded_condition_position = condition_position.unsqueeze(0).expand_as(camera_position)
+        expanded_condition_direction = condition_direction.unsqueeze(0).expand_as(camera_forward)
 
         # Filter based on Position (theta1, theta2)
         theta1 = torch.deg2rad(torch.tensor(self.config.theta1, device=device))
@@ -63,7 +65,7 @@ class ViewSampler:
 
         # Compute Position Angles
         positions_angles = self.compute_angle_between(camera_position - condition_position,
-                                                      torch.zeros_like(camera_position))
+                                                      expanded_condition_position)
 
         # Compute Forward Direction Angles
         forward_angles = self.compute_angle_between(camera_forward, condition_direction.expand_as(camera_forward))
@@ -73,19 +75,19 @@ class ViewSampler:
         valid_source_indices = torch.where(valid_source_mask)[0]
 
         # Novel Views
-        valid_target_mask = (positions_angles <= theta2) & (forward_angles <= phi2)
-        valid_target_indices = torch.where(valid_target_mask)[0]
+        if valid_source_indices.numel() > 0:
+            source_position_normalized = F.normalize(camera_position[valid_source_indices], dim=-1)
+            all_position_normalized = F.normalize(camera_position, dim=-1)
+            dot_matrix = torch.matmul(all_position_normalized, source_position_normalized.t()).clamp(-1., 1.)
+            angle_matrix = torch.acos(dot_matrix)
+            novel_position_mask = torch.any(angle_matrix <= theta2, dim=1)
+        else:
+            novel_position_mask = torch.zeros(num_views, dtype=torch.bool, device=device)
+        orientation_angle_to_condition = self.compute_angle_between(camera_forward, expanded_condition_direction)
+        novel_orientation_mask = orientation_angle_to_condition <= phi2
 
-        if valid_source_indices.numel() == 0:
-            print(f"valid source indices {valid_source_indices} are None")
-            valid_source_indices = torch.randint(0, num_views, (1,), device=device)
-        if valid_target_indices.numel() == 0:
-            print("valid target indices are None")
-            if valid_source_indices.numel() > 0:
-                valid_index = torch.randint(0, valid_source_indices.numel(), (1,), device=device)
-                valid_target_indices = valid_source_indices[valid_index]
-            else:
-                valid_target_indices = torch.randint(0, num_views, (1,), device=device)
+        valid_target_mask = novel_position_mask & novel_orientation_mask
+        valid_target_indices = torch.where(valid_target_mask)[0]
 
         if valid_source_indices.numel() >= self.config.num_source_views:
             source_index = valid_source_indices[torch.randperm(valid_source_indices.numel(), device=device)][:self.config.num_source_views]

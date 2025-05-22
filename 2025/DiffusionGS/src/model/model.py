@@ -96,9 +96,8 @@ class DiffusionGS(LightningModule):
         _, _, _, height, width = batch["target"]["image"].shape
 
         # TODO - Run the model
-        noisy_images = []
         rasterized_images = []
-        noisy_images = self.diffusion_generator.generate(batch)
+        noisy_images = self.diffusion_generator.generate(batch["source"]["image"])
         for timestep in reversed(
                 range(self.diffusion_generator.total_timesteps, self.diffusion_generator.num_timesteps)):
             for sample in batch:
@@ -169,10 +168,12 @@ class DiffusionGS(LightningModule):
     @rank_zero_only
     def validation_step(self, batch, batch_index):
         if self.global_rank == 0:
-            print(
-                f"validation step {self.global_step}; "
-                f"scene = {batch['scene']}; "
-                f"source = {batch['source']['index'].tolist()}")
+            print("batch keys:", batch.keys())
+            print("source type:", type(batch['source']))
+            if isinstance(batch['source'], dict):
+                print("source keys:", batch['source'].keys())
+            else:
+                print("source tensor shape:", batch['source'].shape)
 
     def test_step(self, batch, batch_index):
         batch_size, _, _, height, width = batch["target"]["image"].shape
