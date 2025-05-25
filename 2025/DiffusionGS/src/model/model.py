@@ -11,7 +11,6 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 from src.utils.config_util import get_config
 from src.utils.step_tracker import StepTracker
 from src.utils.benchmarker import Benchmarker
-from src.preprocess.types import BatchedExample
 from src.model.diffusion import DiffusionGenerator
 from src.model.types import Gaussians
 from src.model.rasterizer.render import render
@@ -23,6 +22,9 @@ from src.model.decoder.decoder import GaussianDecoder
 from src.evaluation.metrics import get_psnr
 from src.loss import LossesConfig
 from src.loss.base_loss import BaseLoss
+from src.loss.denoising_loss import DenoisingLoss
+from src.loss.novel_view_loss import NovelViewLoss
+from src.loss.point_distribution_loss import PointDistributionLoss
 
 
 @dataclass
@@ -89,19 +91,15 @@ class DiffusionGS(LightningModule):
 
     def training_step(self, batch, batch_index):
         current_step = self.global_step
-        warmup_steps = self.optimizer_config.warmup_steps
-
         # TODO - Preprocess the BatchedExample
         background_color = Tensor([0, 0, 0])  # TODO - if not preprocess.white_background else [1, 1, 1]
         _, _, _, height, width = batch["target"]["image"].shape
 
         # TODO - Run the model
-        rasterized_images = []
-        noisy_images = self.diffusion_generator.generate(batch["source"]["image"])
         for timestep in reversed(
                 range(self.diffusion_generator.total_timesteps, self.diffusion_generator.num_timesteps)):
             for sample in batch:
-                noisy_image = noisy_images[timestep]
+                noisy_image = self.diffusion_generator.generate(batch["source"]["image"])
 
                 RPPC = batch["target"]["rppc"]
                 timestep_mlp_output = self.timestep_mlp(timestep)
@@ -125,19 +123,20 @@ class DiffusionGS(LightningModule):
                 psnr = get_psnr(batch["target"]["image"], rasterized_image)
                 self.log("train/psnr", psnr)
 
+            del noisy_image, rasterized_image
+            torch.cuda.empty_cache()
+
         # TODO - Compute the loss
         loss_dict = {}
 
         for loss in self.losses:
             if loss.name == "DenoisingLoss":
                 loss_value = loss.forward(batch)
-                loss_dict[loss.name] = loss_value
 
             # TODO - Novel View Loss
             # def forward(self, prediction: Gaussians, batch: BatchedExample) -> Float[Tensor]:
             elif loss.name == "NovelViewLoss":
                 loss_value = loss.forward(Gaussians(positions, covariances, colors, opacities), batch)
-                loss_dict[loss.name] = loss_value
 
             # TODO - Point Distribution Loss
             #   def forward(self,
@@ -145,14 +144,13 @@ class DiffusionGS(LightningModule):
             #                 rays_o: Float[Tensor], rays_d: Float[Tensor], timesteps: int)
             elif loss.name == "PointDistributionLoss":
                 loss_value = loss.forward(weight_u, u_near, u_far, rays_o, ray_d, timestep)
-                loss_dict[loss.name] = loss_value
 
+            loss_dict[loss.name] = loss_value
             self.log(f"loss/{loss.name}", loss_value)
 
         total_loss = torch.where(current_step > self.optimizer_config.warmup_steps,
                                  loss_dict["DenoisingLoss"] + loss_dict["NovelViewLoss"],
-                                 loss_dict["PointDistribution"] * torch.where(self.training_config.is_object_dataset, 1,
-                                                                              0))
+                                 loss_dict["PointDistributionLoss"] * torch.where(self.training_config.is_object_dataset, 1, 0))
 
         if self.global_rank == 0:
             print(f"train step {self.global_step}; "

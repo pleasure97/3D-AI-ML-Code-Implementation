@@ -7,10 +7,14 @@ from torch import Tensor
 
 @dataclass
 class PointDistributionLossConfig:
+    name: str
     sigma_0: float
 
 
 class PointDistributionLoss(BaseLoss[PointDistributionLossConfig]):
+    def __init__(self, config: PointDistributionLossConfig) -> None:
+        super().__init__(config)
+
     def forward(self,
                 weight_u: float, u_near: float, u_far: float,
                 rays_o: Float[Tensor, "batch height * width 3"],

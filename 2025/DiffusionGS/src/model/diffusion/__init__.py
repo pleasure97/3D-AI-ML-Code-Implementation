@@ -25,6 +25,8 @@ class DiffusionGenerator(DiffusionGeneratorConfig):
         self.transform = transforms.Compose([transforms.ToTensor()])
 
         self.pipe = DiffusionPipeline.from_pretrained(self.config.model_id).to(device)
+        self.pipe.to(device)
+        self.pipe.enable_model_cpu_offload()
         self.scheduler = DDIMScheduler.from_config(
             self.pipe.scheduler.config,
             rescale_betas_zero_snr=True,
@@ -34,25 +36,21 @@ class DiffusionGenerator(DiffusionGeneratorConfig):
         self.total_timesteps = self.config.total_timesteps
         self.num_timesteps = self.config.num_timesteps
 
-    def generate(self, source_image: Float[Tensor, "batch channel height width"]) \
+    @torch.no_grad
+    def generate(self, source_image: Float[Tensor, "batch channel height width"], timestep: int) \
             -> list[Float[Tensor, "batch channel height width"]]:
         # Load and transform image
-        original_sample = source_image.to(device=self.device, dtype=self.device)
+        original_sample = source_image.to(device=self.device)
 
-        # Generate noise
-        noise = torch.randn_like(original_sample)
+        with torch.cuda.amp.autocast():
+            # Generate noise
+            noise = torch.randn_like(original_sample)
+            noisy_image = self.scheduler.add_noise(original_sample, noise, timestep)
 
-        timesteps = torch.arange(1, self.total_timesteps, self.num_timesteps, device=self.device)
+        del original_sample, noise
+        torch.cuda.empty_cache()
 
-        # Apply noise at specified timesteps
-        noisy_images = []
-        for timestep in timesteps:
-            noisy_image = self.scheduler.add_noise(original_sample,
-                                                   noise,
-                                                   timestep.unsqueeze(0).expand(original_sample.shape[0]))
-            noisy_images.append(noisy_image)
-
-        return noisy_images
+        return noisy_image
 
     @staticmethod
     def visualize(self,

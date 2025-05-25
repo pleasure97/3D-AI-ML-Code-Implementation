@@ -10,6 +10,7 @@ import torchvision
 
 @dataclass
 class DenoisingLossConfig:
+    name: str
     weight: float
 
 
