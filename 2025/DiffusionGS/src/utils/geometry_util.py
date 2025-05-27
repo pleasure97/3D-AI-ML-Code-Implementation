@@ -69,6 +69,7 @@ def make_SfM_points(image_path: Path):
 
     return sfm_path
 
+
 def inspect_cameras_bin(path, n_bytes=64):
     path = Path(path)
     data = path.read_bytes()[:n_bytes]
@@ -77,6 +78,7 @@ def inspect_cameras_bin(path, n_bytes=64):
     print(data.hex(" "))
     if len(data) >= 8:
         print("First Q (num_cameras):", struct.unpack("<Q", data[:8])[0])
+
 
 def read_next_bytes(fid,
                     format_char_sequence: str,
@@ -188,6 +190,7 @@ def multiply_scaling_rotation(scale, quaternion):
 
     return multiplied_matrix
 
+
 def make_projection_matrix(near, far, tan_fov_x, tan_fov_y):
     top = tan_fov_x * near
     bottom = -top
@@ -207,3 +210,23 @@ def make_projection_matrix(near, far, tan_fov_x, tan_fov_y):
     projection_matrix[2, 3] = -(far * near) / (far - near)
 
     return projection_matrix
+
+
+def make_c2w_from_extrinsics(extrinsics: torch.Tensor) -> torch.Tensor:
+    if extrinsics.dim() == 2 and extrinsics.shape == (3, 4):
+        Rt = extrinsics
+        c2w = torch.eye(4, device=Rt.device, dtype=Rt.dtype)
+        c2w[:3, :3] = Rt[:3, :3]
+        c2w[:3, 3] = Rt[:3, 3]
+    elif extrinsics.dim() == 3 and extrinsics.shape[1:] == (3, 4):
+        B = extrinsics.shape[0]
+        c2w = torch.eye(4, device=extrinsics.device, dtype=extrinsics.dtype) \
+            .reshape(1, 4, 4).repeat(B, 1, 1)
+        c2w[:, :3, :3] = extrinsics[:, :3, :3]
+        c2w[:, :3, 3] = extrinsics[:, :3, 3]
+    else:
+        c2w = extrinsics.clone()
+
+    c2w = torch.linalg.inv(c2w)
+
+    return c2w

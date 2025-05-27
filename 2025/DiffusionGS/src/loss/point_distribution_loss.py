@@ -16,13 +16,13 @@ class PointDistributionLoss(BaseLoss[PointDistributionLossConfig]):
         super().__init__(config)
 
     def forward(self,
-                weight_u: float, u_near: float, u_far: float,
+                u_near: float, u_far: float,
                 rays_o: Float[Tensor, "batch height * width 3"],
                 rays_d: Float[Tensor, "batch height * width 3"],
                 timesteps: int) -> Float:
         l_ts = []
         for timestep in range(timesteps):
-            u_t = weight_u * u_near + (1 - weight_u) * u_far
+            u_t = self.config.sigma_0 * u_near + (1 - self.config.sigma_0) * u_far
             l_t = torch.append(u_t * rays_d[timestep])
             l_ts.append(l_t)
 

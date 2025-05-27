@@ -50,6 +50,13 @@ class VGGLoss(nn.Module):
         self.register_buffer("std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
 
     def forward(self, source, target, feature_layers=[0, 1, 2, 3], style_layers=[]):
+        print("source.shape =", source.shape)
+        if source.dim() == 4:
+            source = source.unsqueeze(2)
+            target = target.unsqueeze(2)
+
+        source = source.flatten(0, 1)
+        target = target.flatten(0, 1)
         if source.shape[1] != 3:
             source = source.repeat(1, 3, 1, 1)
             target = target.repeat(1, 3, 1, 1)
