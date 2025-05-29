@@ -23,12 +23,14 @@ class TimestepEmbedding(ModuleWithConfig[TimestepEmbeddingConfig]):
         self.config = config
         self.time_dim = self.config.time_dim
         self.max_period = self.config.max_period
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def forward(self, x):
-        device = x.device
+        if isinstance(x, int):
+            x = torch.tensor([x], device=self.device)
         half_dim = self.time_dim // 2
         embedding = math.log(self.max_period) / (half_dim - 1)
-        embedding = torch.exp(torch.arange(half_dim, device=device) * -embedding)
+        embedding = torch.exp(torch.arange(half_dim, device=self.device) * -embedding)
         # x.shape : [batch_size, num_timesteps]
         # embedding.shape : [half_dim]
         embedding = x[..., None] * embedding[None, None, :]

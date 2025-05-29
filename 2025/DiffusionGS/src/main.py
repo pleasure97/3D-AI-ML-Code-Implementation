@@ -20,6 +20,7 @@ from model.denoiser.embedding.patch_embedding import PatchMLP
 from model.denoiser.embedding.positional_embedding import PositionalEmbedding
 from model.denoiser.backbone.transformer_backbone import TransformerBackbone
 from model.decoder.decoder import GaussianDecoder
+from model.rasterizer.render import GaussianRenderer
 from preprocess.dataloader import DataModule
 
 
@@ -74,7 +75,7 @@ def train(config_dict: DictConfig):
         max_epochs=-1,
         accelerator="gpu",
         logger=logger,
-        devices="auto",
+        devices=1,
         callbacks=callbacks,
         precision=config.trainer.precision,
         val_check_interval=config.trainer.validation_check_interval,
@@ -101,6 +102,7 @@ def train(config_dict: DictConfig):
         TransformerBackbone(config.model.backbone),
         GaussianDecoder(config.model.object_decoder),
         GaussianDecoder(config.model.scene_decoder),
+        GaussianRenderer(config.render),
         losses,
         step_tracker)
 

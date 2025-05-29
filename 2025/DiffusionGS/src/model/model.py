@@ -14,7 +14,7 @@ from src.utils.benchmarker import Benchmarker
 from src.utils.geometry_util import make_c2w_from_extrinsics
 from src.model.diffusion import DiffusionGenerator
 from src.model.types import Gaussians
-from src.model.rasterizer.render import render
+from src.model.rasterizer.render import GaussianRenderer
 from src.model.denoiser.embedding.timestep_embedding import TimestepMLP
 from src.model.denoiser.embedding.patch_embedding import PatchMLP
 from src.model.denoiser.embedding.positional_embedding import PositionalEmbedding
@@ -52,6 +52,7 @@ class DiffusionGS(LightningModule):
     transformer_backbone: TransformerBackbone
     object_decoder: GaussianDecoder
     scene_decoder: GaussianDecoder
+    gaussian_renderer: GaussianRenderer
     losses: LossesConfig
     optimizer_config: OptimizerConfig
     train_config: TrainConfig
@@ -69,6 +70,7 @@ class DiffusionGS(LightningModule):
                  transformer_backbone: TransformerBackbone,
                  object_decoder: GaussianDecoder,
                  scene_decoder: GaussianDecoder,
+                 gaussian_renderer: GaussianRenderer,
                  losses: list[BaseLoss],
                  step_tracker: StepTracker) -> None:
         super().__init__()
@@ -86,6 +88,7 @@ class DiffusionGS(LightningModule):
         self.transformer_backbone = transformer_backbone
         self.object_decoder = object_decoder
         self.scene_decoder = scene_decoder
+        self.gaussian_renderer = gaussian_renderer
         self.losses = nn.ModuleList(losses)
 
     def training_step(self, batch, batch_index):
@@ -95,11 +98,41 @@ class DiffusionGS(LightningModule):
 
         loss_dict = {}
 
+        if batch_index == 0:
+            print(f"\n[DEBUG] batch type: {type(batch)}")
+
+            # dict라면 key와 각 value의 shape 출력
+            if isinstance(batch, dict):
+                for k, v in batch.items():
+                    print(f"[DEBUG] batch['{k}']: type={type(v)}", end='')
+                    if isinstance(v, torch.Tensor):
+                        print(f", shape={v.shape}")
+                    elif isinstance(v, dict):
+                        print(" (dict)")
+                        for kk, vv in v.items():
+                            print(f"  [DEBUG] batch['{k}']['{kk}']: type={type(vv)}", end='')
+                            if isinstance(vv, torch.Tensor):
+                                print(f", shape={vv.shape}")
+                            else:
+                                print()
+                    else:
+                        print()
+            elif isinstance(batch, (list, tuple)):
+                for i, item in enumerate(batch):
+                    print(f"[DEBUG] batch[{i}]: type={type(item)}", end='')
+                    if isinstance(item, torch.Tensor):
+                        print(f", shape={item.shape}")
+                    else:
+                        print()
+            else:
+                print(f"[DEBUG] batch content: {batch}")
+
         for timestep in reversed(
-                range(self.diffusion_generator.total_timesteps, self.diffusion_generator.num_timesteps)):
+                range(self.diffusion_generator.num_timesteps, self.diffusion_generator.total_timesteps)):
+            print()
             for sample in batch:
                 # TODO - Process noisy_image
-                noisy_image = self.diffusion_generator.generate(batch["source"]["image"])
+                # noisy_image = self.diffusion_generator.generate(batch["source"]["image"], timestep)
 
                 RPPC = batch["target"]["rppc"]
                 timestep_mlp_output = self.timestep_mlp(timestep)
@@ -111,16 +144,17 @@ class DiffusionGS(LightningModule):
                 extrinsics = sample["target"]["extrinsics"]
                 intrinsics = sample["target"]["intrinsics"]
                 image_shape = sample["target"]["image"].shape
-                rasterized_image = render(extrinsics,
-                                          intrinsics,
-                                          sample["target"]["near"],
-                                          sample["target"]["far"],
-                                          image_shape,
-                                          background_color,
-                                          colors,
-                                          positions,
-                                          covariances,
-                                          opacities)
+                rasterized_image = self.gaussian_renderer.render(
+                    extrinsics,
+                    intrinsics,
+                    sample["target"]["near"],
+                    sample["target"]["far"],
+                    image_shape,
+                    background_color,
+                    colors,
+                    positions,
+                    covariances,
+                    opacities)
 
                 for loss in self.losses:
                     if loss.name == "DenoisingLoss":
@@ -143,12 +177,13 @@ class DiffusionGS(LightningModule):
                 psnr = get_psnr(batch["target"]["image"], rasterized_image)
                 self.log("train/psnr", psnr)
 
-            del noisy_image, rasterized_image
+            del rasterized_image  # noisy_image
             torch.cuda.empty_cache()
 
         total_loss = torch.where(current_step > self.optimizer_config.warmup_steps,
                                  loss_dict["DenoisingLoss"] + loss_dict["NovelViewLoss"],
-                                 loss_dict["PointDistributionLoss"] * torch.where(self.training_config.is_object_dataset, 1, 0))
+                                 loss_dict["PointDistributionLoss"] * torch.where(
+                                     self.training_config.is_object_dataset, 1, 0))
 
         if self.global_rank == 0:
             print(f"train step {self.global_step}; "

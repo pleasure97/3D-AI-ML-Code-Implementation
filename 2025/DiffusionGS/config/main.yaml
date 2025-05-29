@@ -135,6 +135,12 @@ trainer:
   validation_check_interval: 0
   gradient_clip_validation: 0.5
 
+render:
+  sh_degree: 3
+  scale_modifier: 1.
+  prefiltered: False
+  debug: False
+
 losses:
   denoising:
     name: "DenoisingLoss"
