@@ -15,7 +15,7 @@ class RenderConfig:
 
 class GaussianRenderer(ModuleWithConfig[RenderConfig]):
     def __init__(self, config: RenderConfig):
-        super().__init__(self, config)
+        super().__init__(config)
         self.config = config
         self.rasterizer = None
 

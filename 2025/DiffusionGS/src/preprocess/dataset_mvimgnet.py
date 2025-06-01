@@ -13,11 +13,13 @@ from src.utils.geometry_util import convert_cameras_bin, convert_images_bin
 from src.preprocess.preprocess_utils import crop_example
 from src.model.denoiser.viewpoint.RPPC import reference_point_plucker_embedding
 
+
 @dataclass
 class DatasetMVImgNetConfig(DatasetConfig):
     name: Literal["MVImgNet"]
     root: str
     max_fov: float
+
 
 class DatasetMVImgNet(IterableDataset):
     config: DatasetMVImgNetConfig
@@ -86,41 +88,67 @@ class DatasetMVImgNet(IterableDataset):
             intrinsics = torch.stack(intrinsics, dim=0)
             images = torch.stack(images, dim=0)
 
-            source_indices, target_indices = self.view_sampler.sample(extrinsics)
+            clean_index, noisy_indices = self.view_sampler.sample(extrinsics)
 
-            # RPPC
-            C2Ws = torch.inverse(extrinsics)
-            RPPCs_source = reference_point_plucker_embedding(
+            print("clean index : ", clean_index)
+            print("noisy_indices : ", noisy_indices)
+            
+            clean_index = int(clean_index.item())
+            noisy_indices = int(noisy_indices.item())
+
+
+            # Sample Clean View
+            clean_extrinsic = extrinsics[clean_index].unsqueeze(0)  # [num_clean_view, 4, 4]
+            clean_intrinsic = intrinsics[clean_index].unsqueeze(0)  # [num_clean_view, 3, 3]
+            clean_view = images[clean_index].unsqueeze(0)           # [num_clean_view, 3, Height, Width]
+            clean_u_near = torch.tensor([self.config.u_near], device=self.device)     # [1]
+            clean_u_far = torch.tensor([self.config.u_far], device=self.device)       # [1]
+            clean_C2W = torch.inverse(clean_extrinsic)
+            print("clean intrinsic shape : ", clean_intrinsic.shape)
+            print("clean c2w shape : ", clean_C2W.shape)
+            clean_RPPC = reference_point_plucker_embedding(
                 self.config.image_shape[0],
                 self.config.image_shape[1],
-                intrinsics[source_indices],
-                C2Ws[source_indices])
-            RPPCs_target = reference_point_plucker_embedding(
+                clean_intrinsic,
+                clean_C2W,
+                jitter=False)
+
+            # Sample Noisy Views
+            num_noisy_views = noisy_indices.shape[0]
+            noisy_extrinsics = extrinsics[noisy_indices]    # [num_noisy_views, 4, 4]
+            noisy_intrinsics = intrinsics[noisy_indices]    # [num_noisy_views, 3, 3]
+            noisy_views = images[noisy_indices]            # [num_noisy_views, 3, Height, Width]
+            noisy_u_nears = torch.full((num_noisy_views,), self.config.u_near, device=self.device)
+            noisy_u_fars = torch.full((num_noisy_views,), self.config.u_far, device=self.device)
+            noisy_C2Ws = torch.inverse(noisy_extrinsics)
+            noisy_RPPCs = reference_point_plucker_embedding(
                 self.config.image_shape[0],
                 self.config.image_shape[1],
-                intrinsics[target_indices],
-                C2Ws[target_indices])
+                noisy_intrinsics,
+                noisy_C2Ws,
+                jitter=False)                               # [num_noisy_views, 6, Height, Width]
 
+            # Construct "example" dictionary.
             example = {
-                "source": {
-                    "extrinsics": extrinsics[source_indices],
-                    "intrinsics": intrinsics[source_indices],
-                    "image": images[source_indices],
-                    "near": self.config.u_near,
-                    "far": self.config.u_far,
-                    "indices": source_indices,
-                    "rppc": RPPCs_source
+                "clean": {
+                    "extrinsic": clean_extrinsic,
+                    "intrinsic": clean_intrinsic,
+                    "view": clean_view,
+                    "near": clean_u_near,
+                    "far": clean_u_far,
+                    "indices": clean_index,
+                    "RPPC": clean_RPPC
                 },
-                "target": {
-                    "extrinsics": extrinsics[target_indices],
-                    "intrinsics": intrinsics[target_indices],
-                    "image": images[target_indices],
-                    "near": self.config.u_near,
-                    "far": self.config.u_far,
-                    "indices": target_indices,
-                    "rppc": RPPCs_target
+                "noisy": {
+                    "extrinsics": noisy_extrinsics,
+                    "intrinsics": noisy_intrinsics,
+                    "views": noisy_views,
+                    "nears": noisy_u_nears,
+                    "fars": noisy_u_fars,
+                    "indices": noisy_indices,
+                    "RPPCs": noisy_RPPCs
                 },
-                "scene": str(scene),
+                "scene": str(scene)
             }
 
             yield crop_example(example, tuple(self.config.image_shape))

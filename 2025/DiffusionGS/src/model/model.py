@@ -129,53 +129,58 @@ class DiffusionGS(LightningModule):
 
         for timestep in reversed(
                 range(self.diffusion_generator.num_timesteps, self.diffusion_generator.total_timesteps)):
-            print()
-            for sample in batch:
-                # TODO - Process noisy_image
-                # noisy_image = self.diffusion_generator.generate(batch["source"]["image"], timestep)
+            noisy_images = []
+            noisy_RPPCs = []
 
-                RPPC = batch["target"]["rppc"]
-                timestep_mlp_output = self.timestep_mlp(timestep)
-                transformer_backbone_input = self.patch_mlp(sample["target"]) + self.positional_embedding
-                transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep, RPPC)
-                positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output,
-                                                                                  transformer_backbone_output)
+            num_noisy_views = batch["noisy"]["indices"].shape[0]
+            for noisy_view_index in range(num_noisy_views):
+                g
 
-                extrinsics = sample["target"]["extrinsics"]
-                intrinsics = sample["target"]["intrinsics"]
-                image_shape = sample["target"]["image"].shape
-                rasterized_image = self.gaussian_renderer.render(
-                    extrinsics,
-                    intrinsics,
-                    sample["target"]["near"],
-                    sample["target"]["far"],
-                    image_shape,
-                    background_color,
-                    colors,
-                    positions,
-                    covariances,
-                    opacities)
 
-                for loss in self.losses:
-                    if loss.name == "DenoisingLoss":
-                        loss_value = loss.forward(batch)
-                    elif loss.name == "NovelViewLoss":
-                        loss_value = loss.forward(Gaussians(positions, covariances, colors, opacities), batch)
-                    elif loss.name == "PointDistributionLoss":
-                        height, width = image_shape
-                        c2w = make_c2w_from_extrinsics(extrinsics)
-                        rays_o, rays_d = get_rays(height, width, intrinsics, c2w)
-                        loss_value = loss.forward(self.gaussian_decoder.u_near,
-                                                  self.gaussian_decoder.u_far,
-                                                  rays_o,
-                                                  rays_d,
-                                                  timestep)
-                    loss_dict[loss.name] = loss_value
-                    self.log(f"loss/{loss.name}", loss_value)
+            noisy_image = self.diffusion_generator.generate(batch["clean"]["view"], timestep)
 
-                # TODO - Compute the metrics
-                psnr = get_psnr(batch["target"]["image"], rasterized_image)
-                self.log("train/psnr", psnr)
+            RPPC = batch["noisy"]["RPPCs"]
+            timestep_mlp_output = self.timestep_mlp(timestep)
+            transformer_backbone_input = self.patch_mlp(batch["noisy"]["views"]) + self.positional_embedding
+            transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep, RPPC)
+            positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output,
+                                                                              transformer_backbone_output)
+
+            extrinsics = batch["noisy"]["extrinsics"]
+            intrinsics = batch["noisy"]["intrinsics"]
+            image_shape = batch["noisy"]["image"].shape
+            rasterized_image = self.gaussian_renderer.render(
+                extrinsics,
+                intrinsics,
+                batch["noisy"]["nears"],
+                batch["noisy"]["fars"],
+                image_shape,
+                background_color,
+                colors,
+                positions,
+                covariances,
+                opacities)
+
+            for loss in self.losses:
+                if loss.name == "DenoisingLoss":
+                    loss_value = loss.forward(batch)
+                elif loss.name == "NovelViewLoss":
+                    loss_value = loss.forward(Gaussians(positions, covariances, colors, opacities), batch)
+                elif loss.name == "PointDistributionLoss":
+                    height, width = image_shape
+                    c2w = make_c2w_from_extrinsics(extrinsics)
+                    rays_o, rays_d = get_rays(height, width, intrinsics, c2w)
+                    loss_value = loss.forward(self.gaussian_decoder.u_near,
+                                              self.gaussian_decoder.u_far,
+                                              rays_o,
+                                              rays_d,
+                                              timestep)
+                loss_dict[loss.name] = loss_value
+                self.log(f"loss/{loss.name}", loss_value)
+
+            # TODO - Compute the metrics
+            psnr = get_psnr(batch["target"]["image"], rasterized_image)
+            self.log("train/psnr", psnr)
 
             del rasterized_image  # noisy_image
             torch.cuda.empty_cache()

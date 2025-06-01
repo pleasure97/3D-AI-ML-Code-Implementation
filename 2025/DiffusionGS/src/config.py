@@ -7,6 +7,7 @@ from src.model.denoiser.embedding.patch_embedding import PatchMLPConfig
 from src.model.denoiser.embedding.positional_embedding import PositionalEmbeddingConfig
 from src.model.denoiser.backbone.transformer_backbone import BackboneConfig
 from src.model.decoder.decoder import GaussianDecoderConfig
+from src.model.rasterizer.render import RenderConfig
 from src.loss import LossesConfig
 from src.model.model import OptimizerConfig, TrainConfig, TestConfig
 from pathlib import Path
@@ -23,7 +24,7 @@ class ModelConfig:
     backbone: BackboneConfig
     object_decoder: GaussianDecoderConfig
     scene_decoder: GaussianDecoderConfig
-
+    render: RenderConfig
 @dataclass
 class CheckpointConfig:
     load: Optional[str]  # wandb://

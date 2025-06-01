@@ -102,7 +102,7 @@ def train(config_dict: DictConfig):
         TransformerBackbone(config.model.backbone),
         GaussianDecoder(config.model.object_decoder),
         GaussianDecoder(config.model.scene_decoder),
-        GaussianRenderer(config.render),
+        GaussianRenderer(config.model.render),
         losses,
         step_tracker)
 

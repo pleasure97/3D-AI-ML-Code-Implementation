@@ -11,10 +11,8 @@ import torch.nn.functional as F
 @dataclass
 class ViewSamplerConfig:
     name: Literal["view_sampler"]
-    num_source_views: int
-    num_target_views: int
-    source_views: list[int] | None
-    target_views: list[int] | None
+    num_clean_views: int
+    num_noisy_views: int
     theta1: float   # Maximum Angle between Noisy View and Condition View (45.)
     theta2: float   # Maximum Angle between Noisy View and Novel View (60.)
     phi1: float     # Minimum Cosine Angle between Noisy Direction and Condition Direction (60.)
@@ -71,12 +69,12 @@ class ViewSampler:
         forward_angles = self.compute_angle_between(camera_forward, condition_direction.expand_as(camera_forward))
 
         # Noisy Views
-        valid_source_mask = (positions_angles <= theta1) & (forward_angles <= phi1)
-        valid_source_indices = torch.where(valid_source_mask)[0]
+        valid_clean_mask = (positions_angles <= theta1) & (forward_angles <= phi1)
+        valid_clean_indices = torch.where(valid_clean_mask)[0]
 
         # Novel Views
-        if valid_source_indices.numel() > 0:
-            source_position_normalized = F.normalize(camera_position[valid_source_indices], dim=-1)
+        if valid_clean_indices.numel() > 0:
+            source_position_normalized = F.normalize(camera_position[valid_clean_indices], dim=-1)
             all_position_normalized = F.normalize(camera_position, dim=-1)
             dot_matrix = torch.matmul(all_position_normalized, source_position_normalized.t()).clamp(-1., 1.)
             angle_matrix = torch.acos(dot_matrix)
@@ -86,27 +84,27 @@ class ViewSampler:
         orientation_angle_to_condition = self.compute_angle_between(camera_forward, expanded_condition_direction)
         novel_orientation_mask = orientation_angle_to_condition <= phi2
 
-        valid_target_mask = novel_position_mask & novel_orientation_mask
-        valid_target_indices = torch.where(valid_target_mask)[0]
+        valid_noisy_mask = novel_position_mask & novel_orientation_mask
+        valid_noisy_indices = torch.where(valid_noisy_mask)[0]
 
-        if valid_source_indices.numel() >= self.config.num_source_views:
-            source_index = valid_source_indices[torch.randperm(valid_source_indices.numel(), device=device)][:self.config.num_source_views]
+        if valid_clean_indices.numel() >= self.config.num_clean_views:
+            clean_index = valid_clean_indices[torch.randperm(valid_clean_indices.numel(), device=device)][:self.config.num_clean_views]
         else:
-            choices = torch.randint(0, valid_source_indices.numel(), (self.config.num_source_views,), device=device)
-            source_index = valid_source_indices[choices]
+            choices = torch.randint(0, valid_clean_indices.numel(), (self.config.num_clean_views,), device=device)
+            clean_index = valid_clean_indices[choices]
 
-        if valid_target_indices.numel() >= self.config.num_target_views:
-            target_index = valid_target_indices[torch.randperm(valid_target_indices.numel(), device=device)][:self.config.num_target_views]
+        if valid_noisy_indices.numel() >= self.config.num_noisy_views:
+            noisy_indices = valid_noisy_indices[torch.randperm(valid_noisy_indices.numel(), device=device)][:self.config.num_noisy_views]
         else:
-            choices = torch.randint(0, valid_target_indices.numel(), (self.config.num_target_views,), device=device)
-            target_index = valid_target_indices[choices]
+            choices = torch.randint(0, valid_noisy_indices.numel(), (self.config.num_noisy_views,), device=device)
+            noisy_indices = valid_noisy_indices[choices]
 
-        return source_index, target_index
+        return clean_index, noisy_indices
 
     @property
-    def num_source_views(self) -> int:
-        return self.config.num_source_views
+    def num_clean_views(self) -> int:
+        return self.config.num_clean_views
 
     @property
-    def num_target_views(self) -> int:
-        return self.config.num_target_views
+    def num_noisy_views(self) -> int:
+        return self.config.num_noisy_views

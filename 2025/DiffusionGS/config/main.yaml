@@ -24,10 +24,8 @@ dataset:
   u_far: 4.2
   view_sampler:
     name: "view_sampler"
-    num_source_views: 32
-    num_target_views: 32
-    source_views:
-    target_views:
+    num_clean_views: 1
+    num_noisy_views: 3
     theta1: 90.
     theta2: 90.
     phi1: 90.
@@ -118,6 +116,11 @@ model:
         time_dim: 128
         max_period: 10_000
       out_dim: 768
+  render:
+    sh_degree: 3
+    scale_modifier: 1.
+    prefiltered: False
+    debug: False
 
 optimizer:
   learning_rate: 4e-4
@@ -134,12 +137,6 @@ trainer:
   precision: 16
   validation_check_interval: 0
   gradient_clip_validation: 0.5
-
-render:
-  sh_degree: 3
-  scale_modifier: 1.
-  prefiltered: False
-  debug: False
 
 losses:
   denoising:
