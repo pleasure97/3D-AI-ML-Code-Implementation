@@ -100,8 +100,6 @@ class DiffusionGS(LightningModule):
 
         if batch_index == 0:
             print(f"\n[DEBUG] batch type: {type(batch)}")
-
-            # dict라면 key와 각 value의 shape 출력
             if isinstance(batch, dict):
                 for k, v in batch.items():
                     print(f"[DEBUG] batch['{k}']: type={type(v)}", end='')
@@ -129,20 +127,15 @@ class DiffusionGS(LightningModule):
 
         for timestep in reversed(
                 range(self.diffusion_generator.num_timesteps, self.diffusion_generator.total_timesteps)):
-            noisy_images = []
-            noisy_RPPCs = []
-
-            num_noisy_views = batch["noisy"]["indices"].shape[0]
-            for noisy_view_index in range(num_noisy_views):
-                g
-
-
-            noisy_image = self.diffusion_generator.generate(batch["clean"]["view"], timestep)
+            transformer_input_tokens = self.tokenize_inputs(batch["clean"]["images"],
+                                                            batch["noisy"]["images"],
+                                                            self.patch_mlp,
+                                                            self.timestep_mlp)
 
             RPPC = batch["noisy"]["RPPCs"]
             timestep_mlp_output = self.timestep_mlp(timestep)
-            transformer_backbone_input = self.patch_mlp(batch["noisy"]["views"]) + self.positional_embedding
-            transformer_backbone_output = self.transformer_backbone(transformer_backbone_input, timestep, RPPC)
+
+            transformer_backbone_output = self.transformer_backbone(transformer_input_tokens, timestep, RPPC)
             positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output,
                                                                               transformer_backbone_output)
 
@@ -201,16 +194,34 @@ class DiffusionGS(LightningModule):
 
         return total_loss
 
+    @staticmethod
+    def tokenize_inputs(self,
+                        timestep: int,
+                        clean_image: torch.Tensor,
+                        noisy_images: list[torch.Tensor],
+                        patch_mlp: PatchMLP,
+                        positional_embedding: PositionalEmbedding) -> torch.Tensor:
+        clean_token = patch_mlp(clean_image)
+        multiview_tokens = [clean_token]
+        for selected_image in noisy_images:
+            noised_image = self.diffusion_generator.generate(selected_image, timestep)
+            noisy_token = patch_mlp(noised_image)
+            multiview_tokens.append(noisy_token)
+        tokens = torch.cat(multiview_tokens, dim=1)
+        tokens = tokens + positional_embedding
+
+        return tokens
+
     @rank_zero_only
     def validation_step(self, batch, batch_index):
         if self.global_rank == 0:
-            if isinstance(batch['source'], dict):
-                print("source keys:", batch['source'].keys())
+            if isinstance(batch["clean"], dict):
+                print("clean keys:", batch["clean"].keys())
             else:
-                print("source tensor shape:", batch['source'].shape)
+                print("clean tensor shape:", batch["clean"].shape)
 
     def test_step(self, batch, batch_index):
-        batch_size, _, _, height, width = batch["target"]["image"].shape
+        batch_size, _, _, height, width = batch["noisy"]["views"].shape
         assert batch_size == 1
         if batch_index % 100 == 0:
             print(f"Test Step {batch_index}")
