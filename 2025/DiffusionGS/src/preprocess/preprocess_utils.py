@@ -66,11 +66,11 @@ def crop_and_scale(
     return center_crop(images, intrinsics, shape)
 
 def crop_views(views: BatchedViews, shape: tuple[int, int]) -> BatchedViews:
-    images, intrinsics = crop_and_scale(views["image"], views["intrinsics"], shape)
-    return {**views, "images": images, "intrinsics": intrinsics}
+    processed_views, intrinsics = crop_and_scale(views["views"], views["intrinsics"], shape)
+    return {**views, "views": processed_views, "intrinsics": intrinsics}
 
 def crop_example(example: BatchedExample, shape: tuple[int, int]) -> BatchedExample:
-    return {**example, "source": crop_views(example["source"], shape), "target": crop_views(example["target"], shape)}
+    return {**example, "clean": crop_views(example["clean"], shape), "noisy": crop_views(example["noisy"], shape)}
 
 def remove_background(images: Float[Tensor, "*#batch channel height width"]):
     *batch, channel, height, width = images.shape

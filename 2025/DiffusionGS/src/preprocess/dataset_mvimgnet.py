@@ -89,13 +89,7 @@ class DatasetMVImgNet(IterableDataset):
             images = torch.stack(images, dim=0)
 
             clean_index, noisy_indices = self.view_sampler.sample(extrinsics)
-
-            print("clean index : ", clean_index)
-            print("noisy_indices : ", noisy_indices)
-            
             clean_index = int(clean_index.item())
-            noisy_indices = int(noisy_indices.item())
-
 
             # Sample Clean View
             clean_extrinsic = extrinsics[clean_index].unsqueeze(0)  # [num_clean_view, 4, 4]
@@ -131,13 +125,13 @@ class DatasetMVImgNet(IterableDataset):
             # Construct "example" dictionary.
             example = {
                 "clean": {
-                    "extrinsic": clean_extrinsic,
-                    "intrinsic": clean_intrinsic,
-                    "view": clean_view,
-                    "near": clean_u_near,
-                    "far": clean_u_far,
+                    "extrinsics": clean_extrinsic,
+                    "intrinsics": clean_intrinsic,
+                    "views": clean_view,
+                    "nears": clean_u_near,
+                    "fars": clean_u_far,
                     "indices": clean_index,
-                    "RPPC": clean_RPPC
+                    "RPPCs": clean_RPPC
                 },
                 "noisy": {
                     "extrinsics": noisy_extrinsics,
