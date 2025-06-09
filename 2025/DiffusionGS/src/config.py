@@ -4,7 +4,6 @@ from src.preprocess.dataloader import DatasetConfig, DataLoaderConfig
 from src.model.diffusion import DiffusionGeneratorConfig
 from src.model.denoiser.embedding.timestep_embedding import TimestepMLPConfig
 from src.model.denoiser.embedding.patch_embedding import PatchMLPConfig
-from src.model.denoiser.embedding.positional_embedding import PositionalEmbeddingConfig
 from src.model.denoiser.backbone.transformer_backbone import BackboneConfig
 from src.model.decoder.decoder import GaussianDecoderConfig
 from src.model.rasterizer.render import RenderConfig
@@ -20,7 +19,6 @@ class ModelConfig:
     diffusion: DiffusionGeneratorConfig
     timestep: TimestepMLPConfig
     patchify: PatchMLPConfig
-    positional: PositionalEmbeddingConfig
     backbone: BackboneConfig
     object_decoder: GaussianDecoderConfig
     scene_decoder: GaussianDecoderConfig

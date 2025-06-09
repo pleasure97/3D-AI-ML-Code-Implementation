@@ -65,10 +65,6 @@ model:
       patch_size: 16
       embedding_dim: 768
     out_dim: 768
-  positional:
-    name: "positional_embedding"
-    num_patches: 16
-    embedding_dim: 512
   backbone:
     name: "transformer_backbone"
     layer:

@@ -48,7 +48,6 @@ class DiffusionGS(LightningModule):
     diffusion_generator: DiffusionGenerator
     timestep_mlp: TimestepMLP
     patch_mlp: PatchMLP
-    positional_embedding: PositionalEmbedding
     transformer_backbone: TransformerBackbone
     object_decoder: GaussianDecoder
     scene_decoder: GaussianDecoder
@@ -66,7 +65,6 @@ class DiffusionGS(LightningModule):
                  diffusion_generator: DiffusionGenerator,
                  timestep_mlp: TimestepMLP,
                  patch_mlp: PatchMLP,
-                 positional_embedding: PositionalEmbedding,
                  transformer_backbone: TransformerBackbone,
                  object_decoder: GaussianDecoder,
                  scene_decoder: GaussianDecoder,
@@ -83,7 +81,7 @@ class DiffusionGS(LightningModule):
         self.diffusion_generator = diffusion_generator
         self.timestep_mlp = timestep_mlp
         self.patch_mlp = patch_mlp
-        self.positional_embedding = positional_embedding
+        self.positional_embedding = None
 
         self.transformer_backbone = transformer_backbone
         self.object_decoder = object_decoder
@@ -93,44 +91,29 @@ class DiffusionGS(LightningModule):
 
     def training_step(self, batch, batch_index):
         current_step = self.global_step
-        # TODO - Preprocess the BatchedExample
+
         background_color = Tensor([0, 0, 0])  # TODO - if not preprocess.white_background else [1, 1, 1]
 
         loss_dict = {}
 
-        if batch_index == 0:
-            print(f"\n[DEBUG] batch type: {type(batch)}")
-            if isinstance(batch, dict):
-                for k, v in batch.items():
-                    print(f"[DEBUG] batch['{k}']: type={type(v)}", end='')
-                    if isinstance(v, torch.Tensor):
-                        print(f", shape={v.shape}")
-                    elif isinstance(v, dict):
-                        print(" (dict)")
-                        for kk, vv in v.items():
-                            print(f"  [DEBUG] batch['{k}']['{kk}']: type={type(vv)}", end='')
-                            if isinstance(vv, torch.Tensor):
-                                print(f", shape={vv.shape}")
-                            else:
-                                print()
-                    else:
-                        print()
-            elif isinstance(batch, (list, tuple)):
-                for i, item in enumerate(batch):
-                    print(f"[DEBUG] batch[{i}]: type={type(item)}", end='')
-                    if isinstance(item, torch.Tensor):
-                        print(f", shape={item.shape}")
-                    else:
-                        print()
-            else:
-                print(f"[DEBUG] batch content: {batch}")
+        if self.positional_embedding is None:
+            num_clean_views = batch["clean"]["views"].shape[1]
+            batch_size, num_noisy_views, _, height, width = batch["noisy"]["views"].shape
+            patch_size = self.patch_mlp.config.embedding.patch_size
+            embedding_dim = self.patch_mlp.config.embedding.embedding_dim
+            patches_per_view = (height // patch_size) * (width // patch_size)
+            num_views = num_clean_views + num_noisy_views
+            num_patches = num_views * patches_per_view
+            self.positional_embedding = PositionalEmbedding(num_patches=num_patches, embedding_dim=embedding_dim)
 
         for timestep in reversed(
                 range(self.diffusion_generator.num_timesteps, self.diffusion_generator.total_timesteps)):
-            transformer_input_tokens = self.tokenize_inputs(batch["clean"]["images"],
-                                                            batch["noisy"]["images"],
+            noisy_views = batch["noisy"]["views"].unbind(dim=1)
+            transformer_input_tokens = self.tokenize_inputs(timestep,
+                                                            batch["clean"]["views"],
+                                                            noisy_views,
                                                             self.patch_mlp,
-                                                            self.timestep_mlp)
+                                                            self.positional_embedding)
 
             RPPC = batch["noisy"]["RPPCs"]
             timestep_mlp_output = self.timestep_mlp(timestep)
@@ -141,7 +124,7 @@ class DiffusionGS(LightningModule):
 
             extrinsics = batch["noisy"]["extrinsics"]
             intrinsics = batch["noisy"]["intrinsics"]
-            image_shape = batch["noisy"]["image"].shape
+            image_shape = batch["noisy"]["views"].shape
             rasterized_image = self.gaussian_renderer.render(
                 extrinsics,
                 intrinsics,
@@ -172,7 +155,7 @@ class DiffusionGS(LightningModule):
                 self.log(f"loss/{loss.name}", loss_value)
 
             # TODO - Compute the metrics
-            psnr = get_psnr(batch["target"]["image"], rasterized_image)
+            psnr = get_psnr(batch["target"]["views"], rasterized_image)
             self.log("train/psnr", psnr)
 
             del rasterized_image  # noisy_image
@@ -194,21 +177,24 @@ class DiffusionGS(LightningModule):
 
         return total_loss
 
-    @staticmethod
     def tokenize_inputs(self,
                         timestep: int,
                         clean_image: torch.Tensor,
                         noisy_images: list[torch.Tensor],
                         patch_mlp: PatchMLP,
                         positional_embedding: PositionalEmbedding) -> torch.Tensor:
+        if clean_image.dim() == 5:
+            clean_image = clean_image.squeeze(1)
         clean_token = patch_mlp(clean_image)
         multiview_tokens = [clean_token]
         for selected_image in noisy_images:
+            if selected_image.dim() == 5:
+                selected_image = selected_image.squeeze(1)
             noised_image = self.diffusion_generator.generate(selected_image, timestep)
             noisy_token = patch_mlp(noised_image)
             multiview_tokens.append(noisy_token)
         tokens = torch.cat(multiview_tokens, dim=1)
-        tokens = tokens + positional_embedding
+        tokens = self.positional_embedding(tokens)
 
         return tokens
 

@@ -41,11 +41,13 @@ class DiffusionGenerator(DiffusionGeneratorConfig):
             -> list[Float[Tensor, "batch channel height width"]]:
         # Load and transform image
         original_sample = source_image.to(device=self.device)
+        batch_size = original_sample.shape[0]
+        timesteps = torch.full((batch_size,), timestep, device=self.device)
 
         with torch.cuda.amp.autocast():
             # Generate noise
             noise = torch.randn_like(original_sample)
-            noisy_image = self.scheduler.add_noise(original_sample, noise, timestep)
+            noisy_image = self.scheduler.add_noise(original_sample, noise, timesteps)
 
         del original_sample, noise
         torch.cuda.empty_cache()

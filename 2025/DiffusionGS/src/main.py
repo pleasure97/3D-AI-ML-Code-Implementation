@@ -98,7 +98,6 @@ def train(config_dict: DictConfig):
         DiffusionGenerator(config.model.diffusion),
         TimestepMLP(config.model.timestep),
         PatchMLP(config.model.patchify),
-        PositionalEmbedding(config.model.positional),
         TransformerBackbone(config.model.backbone),
         GaussianDecoder(config.model.object_decoder),
         GaussianDecoder(config.model.scene_decoder),
