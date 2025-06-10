@@ -3,6 +3,8 @@ from typing import Literal
 from src.model import ModuleWithConfig
 from src.model.denoiser.embedding.timestep_embedding import TimestepMLP, TimestepMLPConfig
 import torch.nn as nn
+import torch
+
 
 @dataclass
 class BackboneLayerConfig:
@@ -11,11 +13,14 @@ class BackboneLayerConfig:
     attention_dim: int
     num_heads: int
     dropout: float
+
+
 @dataclass
 class BackboneConfig:
     name: Literal["transformer_backbone"]
     layer: BackboneLayerConfig
     num_layers: int
+
 
 class TransformerBackboneLayer(ModuleWithConfig[BackboneLayerConfig]):
     def __init__(self, config: BackboneLayerConfig):
@@ -37,13 +42,15 @@ class TransformerBackboneLayer(ModuleWithConfig[BackboneLayerConfig]):
             nn.Dropout(p=self.config.dropout)
         )
 
-    def forward(self, x, timestep, rppc):
+    def forward(self, x, timestep: torch.Tensor, rppc: torch.Tensor):
         # timestep_embedding : [batch_size, 1, embedding_dim]
         timestep_embedding = self.timestep_mlp(timestep)
-        # TODO - Change Variable Name
-        B, D, H, W = rppc.shape
-        N = H * W
-        rppc_view = rppc.view(B, D, N).permute(0, 2, 1)
+
+        batch_size, num_views, channels, height, width = rppc.shape
+        rppc_flattened = rppc.reshape(batch_size, num_views * channels, height, width)
+        rppc_flattened = rppc_flattened.flatten(2)  # [batch_size, num_views * channels, height * width]
+        rppc_view = rppc_flattened.permute(0, 2, 1)  # [batch_size, height * width, num_views * channels]
+
         x = x + timestep_embedding + rppc_view  # [batch_size, num_patches, embedding_dim]
         x = x.transpose(0, 1)  # [num_patches, batch_size, embedding_dim]
         attn_output, _ = self.self_attn(x, x, x)
@@ -67,7 +74,7 @@ class TransformerBackbone(ModuleWithConfig[BackboneConfig]):
             TransformerBackboneLayer(self.config.layer)
             for _ in range(self.config.num_layers)])
 
-    def forward(self, x):
+    def forward(self, x, timestep: torch.Tensor, RPPC: torch.Tensor):
         for layer in self.layers:
-            x = layer(x)
+            x = layer(x, timestep, RPPC)
         return x

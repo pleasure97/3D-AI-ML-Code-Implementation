@@ -118,7 +118,7 @@ class DiffusionGS(LightningModule):
             RPPC = batch["noisy"]["RPPCs"]
             timestep_mlp_output = self.timestep_mlp(timestep)
 
-            transformer_backbone_output = self.transformer_backbone(transformer_input_tokens, timestep, RPPC)
+            transformer_backbone_output = self.transformer_backbone.forward(transformer_input_tokens, timestep, RPPC)
             positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output,
                                                                               transformer_backbone_output)
 

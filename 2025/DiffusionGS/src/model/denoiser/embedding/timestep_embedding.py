@@ -17,6 +17,14 @@ class TimestepMLPConfig:
     embedding: TimestepEmbeddingConfig
     out_dim: int
 
+@dataclass
+class TimestepRPPCConfig:
+    name: Literal["timestep_mlp_rppc"]
+    mlp: TimestepMLPConfig
+    rppc_dim: int
+    hidden_dim: int
+    out_dim: int
+
 class TimestepEmbedding(ModuleWithConfig[TimestepEmbeddingConfig]):
     def __init__(self, config: TimestepEmbeddingConfig):
         super().__init__(config)
@@ -52,3 +60,14 @@ class TimestepMLP(ModuleWithConfig[TimestepMLPConfig]):
 
     def forward(self, x):
         return self.time_mlp(x)
+
+class TimestepRPPC(ModuleWithConfig[TimestepRPPCConfig]):
+    def __init__(self, config: TimestepRPPCConfig):
+        super().__init__(config)
+
+        self.config = config
+        self.timestep_mlp = TimestepMLP(self.config.mlp)
+        self.rppc_embedding = nn.Linear(self.config.rppc_dim, self.config.hidden_dim)
+
+    def forward(self):
+        pass 
