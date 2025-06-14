@@ -76,7 +76,8 @@ model:
           time_dim: 128
           max_period: 10_000
         out_dim: 768
-      attention_dim: 512
+      patch_size: 16
+      attention_dim: 768
       num_heads: 8
       dropout: 0.1
     num_layers: 6

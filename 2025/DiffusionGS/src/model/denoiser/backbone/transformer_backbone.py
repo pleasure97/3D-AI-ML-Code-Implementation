@@ -10,6 +10,7 @@ import torch
 class BackboneLayerConfig:
     name: Literal["transformer_backbone_layer"]
     timestep_mlp: TimestepMLPConfig
+    patch_size: int
     attention_dim: int
     num_heads: int
     dropout: float
@@ -42,23 +43,40 @@ class TransformerBackboneLayer(ModuleWithConfig[BackboneLayerConfig]):
             nn.Dropout(p=self.config.dropout)
         )
 
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        self.rppc_patcher = nn.Conv2d(
+            in_channels=6,
+            out_channels=self.config.attention_dim,
+            kernel_size=self.config.patch_size,
+            stride=self.config.patch_size,
+            padding=0,
+            device=self.device)
+
     def forward(self, x, timestep: torch.Tensor, rppc: torch.Tensor):
-        # timestep_embedding : [batch_size, 1, embedding_dim]
-        timestep_embedding = self.timestep_mlp(timestep)
-
         batch_size, num_views, channels, height, width = rppc.shape
-        rppc_flattened = rppc.reshape(batch_size, num_views * channels, height, width)
-        rppc_flattened = rppc_flattened.flatten(2)  # [batch_size, num_views * channels, height * width]
-        rppc_view = rppc_flattened.permute(0, 2, 1)  # [batch_size, height * width, num_views * channels]
 
-        x = x + timestep_embedding + rppc_view  # [batch_size, num_patches, embedding_dim]
+        rppc_reshaped = rppc.reshape(batch_size, num_views * channels, height, width)
+        rppc_patched = self.rppc_patcher(rppc_reshaped)     # [batch_size, attention_dim, patch_height, patch_width]
+        _, _, patch_height, patch_width = rppc_patched.shape
+        patch_dimension = patch_height * patch_width
+
+        rppc_embedding = rppc_patched.flatten(2).permute(0, 2, 1)
+
+        # timestep_embedding : [batch_size, 1, embedding_dim]
+        timestep_embedding = self.timestep_mlp(timestep)  # [batch_size, embedding_dim]
+        timestep_embedding = timestep_embedding.expand(-1, patch_dimension, -1)
+
+        combined_embedding = timestep_embedding + rppc_embedding
+
+        x = x + combined_embedding         # [batch_size, num_patches, embedding_dim]
         x = x.transpose(0, 1)  # [num_patches, batch_size, embedding_dim]
         attn_output, _ = self.self_attn(x, x, x)
         x = x + attn_output
         x = x.transpose(0, 1)  # [batch_size, num_patches, embedding_dim]
         x = self.layer_norm(x)
 
-        x = x + timestep_embedding + rppc_view
+        x = x + combined_embedding
         mlp_output = self.mlp(x)
         x = self.layer_norm(mlp_output)
 
