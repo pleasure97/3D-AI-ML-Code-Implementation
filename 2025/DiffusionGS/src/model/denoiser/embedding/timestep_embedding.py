@@ -68,6 +68,10 @@ class TimestepRPPC(ModuleWithConfig[TimestepRPPCConfig]):
         self.config = config
         self.timestep_mlp = TimestepMLP(self.config.mlp)
         self.rppc_embedding = nn.Linear(self.config.rppc_dim, self.config.hidden_dim)
+        self.combined_embedding = nn.Sequential(
+            nn.Linear(self.config.hidden_dim * 2, self.config.out_dim),
+            nn.GELU(),
+            nn.Linear(self.config.out_dim, self.config.out_dim))
 
-    def forward(self):
-        pass 
+    def forward(self, timestep: torch.Tensor, rppc: torch.Tensor):
+        pass

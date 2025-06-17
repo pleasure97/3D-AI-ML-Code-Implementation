@@ -17,7 +17,6 @@ from model.model import DiffusionGS
 from model.diffusion import DiffusionGenerator
 from model.denoiser.embedding.timestep_embedding import TimestepMLP
 from model.denoiser.embedding.patch_embedding import PatchMLP
-from model.denoiser.embedding.positional_embedding import PositionalEmbedding
 from model.denoiser.backbone.transformer_backbone import TransformerBackbone
 from model.decoder.decoder import GaussianDecoder
 from model.rasterizer.render import GaussianRenderer

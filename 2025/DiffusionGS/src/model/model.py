@@ -21,7 +21,7 @@ from src.model.denoiser.embedding.positional_embedding import PositionalEmbeddin
 from src.model.denoiser.backbone.transformer_backbone import TransformerBackbone
 from src.model.decoder.decoder import GaussianDecoder
 from src.model.denoiser.viewpoint.RPPC import get_rays
-from src.evaluation.metrics import get_psnr
+from src.evaluation.metrics import get_psnr, get_ssim, get_fid, LPIPS
 from src.loss import LossesConfig
 from src.loss.base_loss import BaseLoss
 
@@ -89,6 +89,9 @@ class DiffusionGS(LightningModule):
         self.gaussian_renderer = gaussian_renderer
         self.losses = nn.ModuleList(losses)
 
+        self.lpips = LPIPS(device="cuda" if torch.cuda.is_available() else "cpu")
+        self.fid = None
+
     def training_step(self, batch, batch_index):
         current_step = self.global_step
 
@@ -108,6 +111,8 @@ class DiffusionGS(LightningModule):
 
         for timestep in reversed(
                 range(self.diffusion_generator.num_timesteps, self.diffusion_generator.total_timesteps)):
+
+            # Tokenize inputs to enter Patchify MLP
             noisy_views = batch["noisy"]["views"].unbind(dim=1)
             transformer_input_tokens = self.tokenize_inputs(timestep,
                                                             batch["clean"]["views"],
@@ -115,13 +120,27 @@ class DiffusionGS(LightningModule):
                                                             self.patch_mlp,
                                                             self.positional_embedding)
 
-            RPPC = batch["noisy"]["RPPCs"]
-            timestep_mlp_output = self.timestep_mlp(timestep)
+            # Process timestep embedding and RPPC to skip connection
+            clean_RPPC = batch["clean"]["RPPCs"]  # [batch_size, 1, 6, height, width]
+            noisy_RPPCs = batch["noisy"]["RPPCs"]  # [batch_size, num_noisy_views, 6, height, width]
+            RPPC = torch.cat([clean_RPPC, noisy_RPPCs], dim=1)  # [batch_size, num_noisy_views + 1, 6, height, width]
 
             transformer_backbone_output = self.transformer_backbone.forward(transformer_input_tokens, timestep, RPPC)
-            positions, covariances, colors, opacities = self.gaussian_decoder(timestep_mlp_output,
-                                                                              transformer_backbone_output)
 
+            # Separately Process timestep embedding which goes into decoders
+            timestep_mlp_output = self.timestep_mlp(timestep)
+
+            # Call forward propagation for each object decoder and scene decoder to train them
+            # In finetuning phase, only one decoder will be used for each dataset type
+            if self.train_config.is_object_dataset:
+                positions, covariances, colors, opacities = self.object_decoder.forward(timestep_mlp_output,
+                                                                                        transformer_backbone_output)
+                self.scene_decoder.forward(timestep_mlp_output, transformer_backbone_output)
+            else:
+                self.object_decoder.forward(timestep_mlp_output, transformer_backbone_output)
+                positions, covariances, colors, opacities = self.scene_decoder.forward(timestep_mlp_output,
+                                                                                       transformer_backbone_output)
+            # Rasterize 3D Gaussians
             extrinsics = batch["noisy"]["extrinsics"]
             intrinsics = batch["noisy"]["intrinsics"]
             image_shape = batch["noisy"]["views"].shape
