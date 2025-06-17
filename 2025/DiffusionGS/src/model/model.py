@@ -225,6 +225,26 @@ class DiffusionGS(LightningModule):
             else:
                 print("clean tensor shape:", batch["clean"].shape)
 
+        source_image, target_image = batch
+        prediction_image = self(source_image)
+
+        psnr_value = get_psnr(target_image, prediction_image)
+        self.log('val/psnr', psnr_value, on_step=False, on_epoch=True)
+
+        ssim_value = get_ssim(target_image, prediction_image)
+        self.log('val/ssim', ssim_value, on_step=False, on_epoch=True)
+
+        lpips_value = self.lpips.forward(target_image, prediction_image)
+        self.log('val/lpips', lpips_value, on_step=False, on_epoch=True)
+
+        if self.fid is None:
+            self.fid = get_fid(target_image, prediction_image)
+
+    def on_validation_epoch_end(self) -> None:
+        fid_value = self.fid.compute()
+        self.log('val/fid', fid_value, on_epoch=True)
+        self.fid.reset()
+
     def test_step(self, batch, batch_index):
         batch_size, _, _, height, width = batch["noisy"]["views"].shape
         assert batch_size == 1

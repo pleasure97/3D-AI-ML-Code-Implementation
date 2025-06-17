@@ -34,6 +34,7 @@ class DatasetMVImgNet(IterableDataset):
         super().__init__()
         self.config = config
         self.stage = stage
+        self.dataset_iterator = None
         self.view_sampler = view_sampler
         self.device = device
 
@@ -98,8 +99,6 @@ class DatasetMVImgNet(IterableDataset):
             clean_u_near = torch.tensor([self.config.u_near], device=self.device)     # [1]
             clean_u_far = torch.tensor([self.config.u_far], device=self.device)       # [1]
             clean_C2W = torch.inverse(clean_extrinsic)
-            print("clean intrinsic shape : ", clean_intrinsic.shape)
-            print("clean c2w shape : ", clean_C2W.shape)
             clean_RPPC = reference_point_plucker_embedding(
                 self.config.image_shape[0],
                 self.config.image_shape[1],
@@ -149,3 +148,9 @@ class DatasetMVImgNet(IterableDataset):
 
     def __len__(self):
         return len(self.scenes)
+
+    def __getitem__(self, index: int):
+        # Assume that the dataset is type of IterableDataset
+        if self.dataset_iterator is None:
+            self.dataset_iterator = iter(self.dataset_iterator)
+        return next(self.dataset_iterator)

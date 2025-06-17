@@ -2,11 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models
+from torchmetrics.image.fid import FrechetInceptionDistance
 
 
 @torch.no_grad
-def get_psnr(clean_image: torch.Tensor, noisy_image: torch.Tensor, max_value=1.) -> float:
-    MSE = F.mse_loss(clean_image, noisy_image)
+def get_psnr(ground_truth_image: torch.Tensor, prediction_image: torch.Tensor, max_value=1.) -> float:
+    MSE = F.mse_loss(ground_truth_image, prediction_image)
     if MSE == 0:
         return float('inf')
 
@@ -31,7 +32,7 @@ class LPIPS(nn.Module):
 
         self.register_buffer('weights', torch.tensor([0.1, 0.2, 0.4, 0.3], device=device))
 
-        # Make model's paramters untrainable
+        # Make model's parameters untrainable
         for parameter in self.feature_extractor.parameters():
             parameter.requires_grad = False
 
@@ -99,3 +100,13 @@ def ssim(image1: torch.Tensor, image2: torch.Tensor, window_size: int = 11, C1: 
 
 def get_ssim(image1: torch.Tensor, image2: torch.Tensor) -> float:
     return 1 - ssim(image1, image2)
+
+
+@torch.no_grad
+def get_fid(ground_truth_image: torch.Tensor, prediction_image: torch.Tensor) -> FrechetInceptionDistance:
+    fid = FrechetInceptionDistance(feature=2048)
+
+    fid.update(ground_truth_image, real=True)
+    fid.update(prediction_image, real=False)
+
+    return fid
