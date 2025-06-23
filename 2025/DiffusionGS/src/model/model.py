@@ -99,6 +99,7 @@ class DiffusionGS(LightningModule):
 
         loss_dict = {}
 
+        # Lazy Initialization of Positional Embedding
         if self.positional_embedding is None:
             num_clean_views = batch["clean"]["views"].shape[1]
             batch_size, num_noisy_views, _, height, width = batch["noisy"]["views"].shape
@@ -140,50 +141,61 @@ class DiffusionGS(LightningModule):
                 self.object_decoder.forward(timestep_mlp_output, transformer_backbone_output)
                 positions, covariances, colors, opacities = self.scene_decoder.forward(timestep_mlp_output,
                                                                                        transformer_backbone_output)
-            # Rasterize 3D Gaussians
+
+            # Compute Denoising Loss between Clean View and N Noisy Views
+            denoising_loss = next(loss for loss in self.losses if loss.name == "DenoisingLoss")
+            denoising_loss_value = denoising_loss.forward(batch)
+            loss_dict["DenoisingLoss"] = denoising_loss_value
+            self.log("loss/DenoisingLoss", denoising_loss_value)
+
+            # Initialize variables that are repeatedly used in operations
             extrinsics = batch["noisy"]["extrinsics"]
             intrinsics = batch["noisy"]["intrinsics"]
             image_shape = batch["noisy"]["views"].shape
-            rasterized_image = self.gaussian_renderer.render(
-                extrinsics,
-                intrinsics,
-                batch["noisy"]["nears"],
-                batch["noisy"]["fars"],
-                image_shape,
-                background_color,
-                colors,
-                positions,
-                covariances,
-                opacities)
 
-            for loss in self.losses:
-                if loss.name == "DenoisingLoss":
-                    loss_value = loss.forward(batch)
-                elif loss.name == "NovelViewLoss":
-                    loss_value = loss.forward(Gaussians(positions, covariances, colors, opacities), batch)
-                elif loss.name == "PointDistributionLoss":
-                    height, width = image_shape
-                    c2w = make_c2w_from_extrinsics(extrinsics)
-                    rays_o, rays_d = get_rays(height, width, intrinsics, c2w)
-                    loss_value = loss.forward(self.gaussian_decoder.u_near,
-                                              self.gaussian_decoder.u_far,
-                                              rays_o,
-                                              rays_d,
-                                              timestep)
-                loss_dict[loss.name] = loss_value
-                self.log(f"loss/{loss.name}", loss_value)
+            # Compute Point Distribution Loss
+            point_distribution_loss = next(loss for loss in self.losses if loss.name == "PointDistributionLoss")
 
-            # TODO - Compute the metrics
-            psnr = get_psnr(batch["target"]["views"], rasterized_image)
-            self.log("train/psnr", psnr)
+            height, width = image_shape
+            c2w = make_c2w_from_extrinsics(extrinsics)
+            rays_o, rays_d = get_rays(height, width, intrinsics, c2w)
 
-            del rasterized_image  # noisy_image
-            torch.cuda.empty_cache()
+            point_distribution_loss_value = point_distribution_loss.forward(self.gaussian_decoder.u_near,
+                                                                            self.gaussian_decoder.u_far,
+                                                                            rays_o,
+                                                                            rays_d,
+                                                                            timestep)
+            loss_dict["PointDistributionLoss"] = point_distribution_loss_value
+            self.log("loss/PointDistributionLoss", point_distribution_loss_value)
 
-        total_loss = torch.where(current_step > self.optimizer_config.warmup_steps,
-                                 loss_dict["DenoisingLoss"] + loss_dict["NovelViewLoss"],
-                                 loss_dict["PointDistributionLoss"] * torch.where(
-                                     self.training_config.is_object_dataset, 1, 0))
+            # Compute Novel View Loss between M Novel Views and Rasterized Image when Timestep is 0
+            if timestep is 0:
+                novel_view_loss = next(loss for loss in self.losses if loss.name == "NovelViewLoss")
+
+                # Rasterize 3D Gaussians
+                rasterized_image = self.gaussian_renderer.render(
+                    extrinsics,
+                    intrinsics,
+                    batch["noisy"]["nears"],
+                    batch["noisy"]["fars"],
+                    image_shape,
+                    background_color,
+                    colors,
+                    positions,
+                    covariances,
+                    opacities)
+
+                novel_view_loss_value = novel_view_loss.forward(batch, rasterized_image)
+                loss_dict["NovelViewLoss"] = novel_view_loss_value
+                self.log("loss/NovelViewLoss", novel_view_loss_value)
+
+                del rasterized_image  # noisy_image
+                torch.cuda.empty_cache()
+
+        total_loss = \
+            torch.where(current_step > self.optimizer_config.warmup_steps,
+                        loss_dict["DenoisingLoss"] + loss_dict["NovelViewLoss"],
+                        loss_dict["PointDistributionLoss"] * torch.where(self.training_config.is_object_dataset, 1, 0))
 
         if self.global_rank == 0:
             print(f"train step {self.global_step}; "
@@ -200,8 +212,7 @@ class DiffusionGS(LightningModule):
                         timestep: int,
                         clean_image: torch.Tensor,
                         noisy_images: list[torch.Tensor],
-                        patch_mlp: PatchMLP,
-                        positional_embedding: PositionalEmbedding) -> torch.Tensor:
+                        patch_mlp: PatchMLP) -> torch.Tensor:
         if clean_image.dim() == 5:
             clean_image = clean_image.squeeze(1)
         clean_token = patch_mlp(clean_image)
@@ -225,7 +236,13 @@ class DiffusionGS(LightningModule):
             else:
                 print("clean tensor shape:", batch["clean"].shape)
 
-        source_image, target_image = batch
+    def test_step(self, batch, batch_index):
+        batch_size, _, _, height, width = batch["noisy"]["views"].shape
+        assert batch_size == 1
+        if batch_index % 100 == 0:
+            print(f"Test Step {batch_index}")
+
+        source_image, target_image = batch["clean"]["views"], batch["noisy"]["views"]
         prediction_image = self(source_image)
 
         psnr_value = get_psnr(target_image, prediction_image)
@@ -240,21 +257,14 @@ class DiffusionGS(LightningModule):
         if self.fid is None:
             self.fid = get_fid(target_image, prediction_image)
 
-    def on_validation_epoch_end(self) -> None:
-        fid_value = self.fid.compute()
-        self.log('val/fid', fid_value, on_epoch=True)
-        self.fid.reset()
-
-    def test_step(self, batch, batch_index):
-        batch_size, _, _, height, width = batch["noisy"]["views"].shape
-        assert batch_size == 1
-        if batch_index % 100 == 0:
-            print(f"Test Step {batch_index}")
-
     def on_test_end(self) -> None:
         name = get_config()["wandb"]["name"]
         self.benchmarker.dump(self.test_config.output_path / name / "benchmark.json")
         self.benchmarker.dump_memory(self.test_config.output_path / name / "peak_memory.json")
+
+        fid_value = self.fid.compute()
+        self.log('val/fid', fid_value, on_epoch=True)
+        self.fid.reset()
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=self.optimizer_config.learning_rate)
