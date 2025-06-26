@@ -26,6 +26,7 @@ dataset:
     name: "view_sampler"
     num_clean_views: 1
     num_noisy_views: 3
+    num_novel_views: 5
     theta1: 90.
     theta2: 90.
     phi1: 90.

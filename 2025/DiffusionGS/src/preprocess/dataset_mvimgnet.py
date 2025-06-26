@@ -89,7 +89,7 @@ class DatasetMVImgNet(IterableDataset):
             intrinsics = torch.stack(intrinsics, dim=0)
             images = torch.stack(images, dim=0)
 
-            clean_index, noisy_indices = self.view_sampler.sample(extrinsics)
+            clean_index, noisy_indices, novel_indices = self.view_sampler.sample(extrinsics)
             clean_index = int(clean_index.item())
 
             # Sample Clean View
