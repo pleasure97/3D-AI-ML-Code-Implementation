@@ -97,11 +97,15 @@ class DiffusionGS(LightningModule):
 
         background_color = Tensor([0, 0, 0])  # TODO - if not preprocess.white_background else [1, 1, 1]
 
+        # Initialize Loss dict and Loss Values
         loss_dict = {}
+        denoising_loss = 0.
+        novel_view_loss = 0.
+        point_distribution_loss = 0.
 
-        # Lazy Initialization of Positional Embedding
+        # Do Lazy Initialization for Positional Embedding
         if self.positional_embedding is None:
-            num_clean_views = batch["clean"]["views"].shape[1]
+            num_clean_views = batch["clean"]["views"].shape[1]  # [batch_size, num_clean_views, 3, height, width]
             batch_size, num_noisy_views, _, height, width = batch["noisy"]["views"].shape
             patch_size = self.patch_mlp.config.embedding.patch_size
             embedding_dim = self.patch_mlp.config.embedding.embedding_dim
@@ -110,11 +114,12 @@ class DiffusionGS(LightningModule):
             num_patches = num_views * patches_per_view
             self.positional_embedding = PositionalEmbedding(num_patches=num_patches, embedding_dim=embedding_dim)
 
+        # Iterate Timesteps
         for timestep in reversed(
                 range(self.diffusion_generator.num_timesteps, self.diffusion_generator.total_timesteps)):
 
             # Tokenize inputs to enter Patchify MLP
-            noisy_views = batch["noisy"]["views"].unbind(dim=1)
+            noisy_views = batch["noisy"]["views"].unbind(dim=1)  # [batch_size, num_noisy_views, 3, height, width]
             transformer_input_tokens = self.tokenize_inputs(timestep,
                                                             batch["clean"]["views"],
                                                             noisy_views,
@@ -142,55 +147,63 @@ class DiffusionGS(LightningModule):
                 positions, covariances, colors, opacities = self.scene_decoder.forward(timestep_mlp_output,
                                                                                        transformer_backbone_output)
 
-            # Compute Denoising Loss between Clean View and N Noisy Views
-            denoising_loss = next(loss for loss in self.losses if loss.name == "DenoisingLoss")
-            denoising_loss_value = denoising_loss.forward(batch)
-            loss_dict["DenoisingLoss"] = denoising_loss_value
-            self.log("loss/DenoisingLoss", denoising_loss_value)
-
             # Initialize variables that are repeatedly used in operations
-            extrinsics = batch["noisy"]["extrinsics"]
-            intrinsics = batch["noisy"]["intrinsics"]
-            image_shape = batch["noisy"]["views"].shape
+            noisy_extrinsics = batch["noisy"]["extrinsics"]
+            noisy_intrinsics = batch["noisy"]["intrinsics"]
+            noisy_image_shape = batch["noisy"]["views"].shape
 
             # Compute Point Distribution Loss
-            point_distribution_loss = next(loss for loss in self.losses if loss.name == "PointDistributionLoss")
+            PointDistributionLoss = next(loss for loss in self.losses if loss.name == "PointDistributionLoss")
 
-            height, width = image_shape
-            c2w = make_c2w_from_extrinsics(extrinsics)
-            rays_o, rays_d = get_rays(height, width, intrinsics, c2w)
+            height, width = noisy_image_shape
+            c2w = make_c2w_from_extrinsics(noisy_extrinsics)
+            rays_o, rays_d = get_rays(height, width, noisy_intrinsics, c2w)
 
-            point_distribution_loss_value = point_distribution_loss.forward(self.gaussian_decoder.u_near,
-                                                                            self.gaussian_decoder.u_far,
-                                                                            rays_o,
-                                                                            rays_d,
-                                                                            timestep)
-            loss_dict["PointDistributionLoss"] = point_distribution_loss_value
-            self.log("loss/PointDistributionLoss", point_distribution_loss_value)
+            # TODO - Consider k pixels and Divide loss value by k in forward()
+            point_distribution_loss_value = PointDistributionLoss.forward(
+                self.gaussian_decoder.u_near,
+                self.gaussian_decoder.u_far,
+                rays_o,
+                rays_d,
+                timestep)
+            point_distribution_loss += point_distribution_loss_value
 
-            # Compute Novel View Loss between M Novel Views and Rasterized Image when Timestep is 0
-            if timestep is 0:
-                novel_view_loss = next(loss for loss in self.losses if loss.name == "NovelViewLoss")
+            # Rasterize 3D Gaussians
+            rasterized_image = self.gaussian_renderer.render(
+                noisy_extrinsics,
+                noisy_intrinsics,
+                batch["noisy"]["nears"],
+                batch["noisy"]["fars"],
+                noisy_image_shape,
+                background_color,
+                colors,
+                positions,
+                covariances,
+                opacities)
 
-                # Rasterize 3D Gaussians
-                rasterized_image = self.gaussian_renderer.render(
-                    extrinsics,
-                    intrinsics,
-                    batch["noisy"]["nears"],
-                    batch["noisy"]["fars"],
-                    image_shape,
-                    background_color,
-                    colors,
-                    positions,
-                    covariances,
-                    opacities)
+            # Compute Denoising Loss between Multi-view Predicted Images and Ground-truth Image
+            DenoisingLoss = next(loss for loss in self.losses if loss.name == "DenoisingLoss")
+            # TODO - Consider N Multi-view Images and Divide loss value by N in forward()
+            denoising_loss_value = DenoisingLoss.forward(batch, rasterized_image)
+            denoising_loss += denoising_loss_value
 
-                novel_view_loss_value = novel_view_loss.forward(batch, rasterized_image)
-                loss_dict["NovelViewLoss"] = novel_view_loss_value
-                self.log("loss/NovelViewLoss", novel_view_loss_value)
+            # Compute Novel View Loss between Multi-view Predicted Images and M Novel Views
+            NovelViewLoss = next(loss for loss in self.losses if loss.name == "NovelViewLoss")
+            # TODO - Consider N Multi-view Images and M Novel views in forward()
+            novel_view_loss_value = NovelViewLoss.forward(batch, rasterized_image)
+            novel_view_loss += novel_view_loss_value
 
-                del rasterized_image  # noisy_image
-                torch.cuda.empty_cache()
+            del rasterized_image
+            torch.cuda.empty_cache()
+
+        loss_dict["PointDistributionLoss"] = point_distribution_loss_value / self.diffusion_generator.total_timesteps
+        self.log("loss/PointDistributionLoss", point_distribution_loss_value)
+
+        loss_dict["DenoisingLoss"] = denoising_loss_value / self.diffusion_generator.total_timesteps
+        self.log("loss/DenoisingLoss", denoising_loss_value)
+
+        loss_dict["NovelViewLoss"] = novel_view_loss_value / self.diffusion_generator.total_timesteps
+        self.log("loss/DenoisingLoss", denoising_loss_value)
 
         total_loss = \
             torch.where(current_step > self.optimizer_config.warmup_steps,
