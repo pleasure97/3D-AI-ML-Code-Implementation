@@ -1,19 +1,21 @@
-from dataclasses import dataclass
 import objaverse
-from src.preprocess.dataset_common import DatasetConfig
+from dataclasses import dataclass
 from typing import Literal, List, Set
-from torch.utils.data import IterableDataset
-from src.preprocess.types import Stage
-from src.model.denoiser.viewpoint.view_sampler import ViewSampler
-import torch
 from jaxtyping import Float, UInt8
-from torch import Tensor
 from PIL import Image
 from io import BytesIO
-import torchvision.transforms as transforms
-from src.preprocess.preprocess_utils import crop_example
 import os
 import json
+from src.preprocess.dataset_common import DatasetConfig
+from src.preprocess.types import Stage
+from src.preprocess.preprocess_utils import crop_example
+from src.model.denoiser.viewpoint.view_sampler import ViewSampler
+from src.model.denoiser.viewpoint.RPPC import reference_point_plucker_embedding
+import torch
+from torch import Tensor
+from torch.utils.data import IterableDataset
+import torchvision.transforms as transforms
+
 
 @dataclass
 class DatasetObjaverseConfig(DatasetConfig):
@@ -110,35 +112,56 @@ class DatasetObjaverse(IterableDataset):
             if self.stage in ("train", "val"):
                 chunk = [chunk[i] for i in torch.randperm(len(chunk))]
 
-            for ch in chunk:
-                extrinsics, intrinsics = self.convert_poses(ch["cameras"])
-                scene = ch["key"]
-                source_indices, target_indices = self.view_sampler.sample(extrinsics)
+            for example in chunk:
+                extrinsics, intrinsics = self.convert_poses(example["cameras"])
+                scene = example["key"]
+                clean_index, noisy_indices, novel_indices = self.view_sampler.sample(extrinsics)
 
-                source_images = [example["images"][source_index.item()] for source_index in source_indices]
-                target_images = [example["images"][target_index.item()] for target_index in target_indices]
+                clean_info = self._prepare_views(clean_index, extrinsics, intrinsics, example["images"])
+                noisy_info = self._prepare_views(noisy_indices, extrinsics, intrinsics, example["images"])
+                novel_info = self._prepare_views(novel_indices, extrinsics, intrinsics, example["images"])
 
                 example = {
-                    "source": {
-                        "extrinsics": extrinsics[source_indices],
-                        "intrinsics": intrinsics[source_indices],
-                        "image": source_images,
-                        "near": self.u_near,
-                        "far": self.u_far,
-                        "indices": source_indices
-                    },
-                    "target": {
-                        "extrinsics": extrinsics[target_indices],
-                        "intrinsics": intrinsics[target_indices],
-                        "image": target_images,
-                        "near": self.u_near,
-                        "far": self.u_far,
-                        "indices": target_indices
-                    },
+                    "clean": clean_info,
+                    "noisy": noisy_info,
+                    "novel": novel_info,
                     "scene": scene
                 }
 
                 yield crop_example(example, tuple(self.config.image_shape))
+
+    def _prepare_views(self, indices, extrinsics, intrinsics, images, jitter=False):
+        num_sampled_views = indices.shape[0]
+
+        if isinstance(indices, int):
+            indices = torch.tensor([indices], device=self.device)
+        elif isinstance(indices, list):
+            indices = torch.tensor(indices, device=self.device)
+
+        sampled_extrinsics = extrinsics[indices]  # [num_sampled_views, 4, 4]
+        sampled_intrinsics = intrinsics[indices]  # [num_sampled_views, 3, 3]
+        sampled_views = images[indices]
+
+        u_nears = torch.full((num_sampled_views,), self.config.u_near, device=self.device)
+        u_fars = torch.full((num_sampled_views,), self.config.u_far, device=self.device)
+
+        C2Ws = torch.inverse(sampled_extrinsics)
+        RPPCs = reference_point_plucker_embedding(
+            self.config.image_shape[0],
+            self.config.image_shape[1],
+            sampled_intrinsics,
+            C2Ws,
+            jitter=jitter)  # [num_noisy_views, 6, Height, Width]
+
+        return {
+            "extrinsics": sampled_extrinsics,
+            "intrinsics": sampled_intrinsics,
+            "views": sampled_views,
+            "nears": u_nears,
+            "fars": u_fars,
+            "indices": indices,
+            "RPPCs": RPPCs
+        }
 
     def __len__(self):
         return len(self.chunks)
