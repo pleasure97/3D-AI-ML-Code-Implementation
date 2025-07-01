@@ -18,11 +18,12 @@ class VGGLoss(nn.Module):
     def __init__(self, resize=True):
         super().__init__()
         blocks = []
-        VGG16 = torchvision.models.vgg16(weights=torchvision.models.VGG16_Weights.DEFAULT)
-        blocks.append(VGG16.features[:4].eval())
-        blocks.append(VGG16.features[4:9].eval())
-        blocks.append(VGG16.features[9:16].eval())
-        blocks.append(VGG16.features[16:23].eval())
+        VGG19 = torchvision.models.vgg19(weights=torchvision.models.VGG19_Weights.DEFAULT)
+        blocks.append(VGG19.features[:4].eval())
+        blocks.append(VGG19.features[4:9].eval())
+        blocks.append(VGG19.features[9:18].eval())
+        blocks.append(VGG19.features[18:27].eval())
+        blocks.append(VGG19.features[27:36].eval())
 
         for block in blocks:
             for param in block.parameters():
