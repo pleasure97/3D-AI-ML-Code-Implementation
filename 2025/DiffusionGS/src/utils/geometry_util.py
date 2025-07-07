@@ -158,7 +158,7 @@ def make_rotation_matrix(quaternion):
 
     quaternion = quaternion / norm[:, None]
 
-    rotation_matrix = torch.zeros((quaternion.size(0), 3, 3))
+    rotation_matrix = torch.zeros((quaternion.size(0), 3, 3), device="cuda")
 
     r = quaternion[:, 0]
     x = quaternion[:, 1]

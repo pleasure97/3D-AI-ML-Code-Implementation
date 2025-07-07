@@ -40,11 +40,11 @@ class GaussianDecoder(ModuleWithConfig[GaussianDecoderConfig]):
             nn.Linear(self.config.hidden_dim, self.config.output_dim))
 
         # weight to control center
-        self.weight = torch.full((self.num_points,), self.config.weight, dtype=torch.float32)
+        self.weight = self.config.weight
 
-    def forward(self, x, transformer_output) -> Gaussians:
+    def forward(self, x, timestep_embedding) -> Gaussians:
         output1 = self.mlp1(x)
-        output1 = output1 + transformer_output.mean(dim=1, keepdim=True)
+        output1 = output1 + timestep_embedding.mean(dim=1, keepdim=True)
 
         output2 = self.mlp2(output1)
 
@@ -53,8 +53,7 @@ class GaussianDecoder(ModuleWithConfig[GaussianDecoderConfig]):
 
         # Depth Transition
         depth = self.weight * self.u_near + (1 - self.weight) * self.u_far
-        depth = depth.view(1, self.num_points, 1)
-        positions[:, :, 2:3] = depth
+        positions[:, :, 2] = depth
 
         # Color is in [0, 1]
         colors = torch.sigmoid(output2[:, :, 3:6])
@@ -73,9 +72,9 @@ class GaussianDecoder(ModuleWithConfig[GaussianDecoderConfig]):
         scaling_rotation_matrix = multiply_scaling_rotation(scale, quaternion)
         scaling_rotation_matrix = scaling_rotation_matrix.view(batch, num_points, 3, 3)
 
-        covariances = torch.matmul(scaling_rotation_matrix, scaling_rotation_matrix.tranpose(-1, -2))
+        covariances = torch.matmul(scaling_rotation_matrix, scaling_rotation_matrix.transpose(-1, -2))
 
         # Opacity
         opacities = torch.sigmoid(output2[:, :, 9:10]).squeeze(-1)
 
-        return Gaussians(positions, covariances, colors, opacities)
+        return positions, covariances, colors, opacities

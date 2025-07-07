@@ -108,12 +108,16 @@ class DatasetMVImgNet(IterableDataset):
             yield crop_example(example, tuple(self.config.image_shape))
 
     def _prepare_views(self, indices, extrinsics, intrinsics, images, jitter=False):
-        num_sampled_views = indices.shape[0]
-
         if isinstance(indices, int):
             indices = torch.tensor([indices], device=self.device)
         elif isinstance(indices, list):
             indices = torch.tensor(indices, device=self.device)
+        elif torch.is_tensor(indices):
+            indices = indices.to(self.device)
+        else:
+            raise ValueError(f"Unsupported type for indices : {type(indices)}")
+
+        num_sampled_views = indices.shape[0]
 
         sampled_extrinsics = extrinsics[indices]  # [num_sampled_views, 4, 4]
         sampled_intrinsics = intrinsics[indices]  # [num_sampled_views, 3, 3]

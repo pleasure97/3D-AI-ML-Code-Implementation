@@ -48,9 +48,9 @@ class ViewSampler:
         camera_forward = -extrinsics[:, :3, 2]  # [num_views, 3]
 
         # Select Condition View
-        clean_index = torch.randint(0, num_views, (1,), device=device).item()
-        clean_position = camera_position[clean_index]
-        clean_forward = camera_forward[clean_index]
+        clean_index = torch.randint(0, num_views, (1,), device=device)
+        clean_position = camera_position[clean_index].squeeze(0)
+        clean_forward = camera_forward[clean_index].squeeze(0)
 
         # Filter based on Position (theta1)
         theta1 = torch.deg2rad(torch.tensor(self.config.theta1, device=device))
@@ -75,7 +75,7 @@ class ViewSampler:
             noisy_indices = torch.cat([noisy_indices_candidates, noisy_extra_indices], dim=0)
 
         # Exclude 1 clean view and N noisy views from candidate views.
-        excluded_indices = torch.cat([clean_index, noisy_indices])
+        excluded_indices = torch.cat([clean_index, noisy_indices], dim=0)
         all_indices = torch.arange(num_views, device=device)
         remaining_indices = all_indices[~torch.isin(all_indices, excluded_indices)]
 
@@ -97,7 +97,7 @@ class ViewSampler:
         normalized_cosine_matrix = normalized_noisy_position @ normalized_remaining_position.t() # [num_noisy_indices, num_remaining_indices]
         theta_dn_matrix = torch.acos(normalized_cosine_matrix.clamp(-1., 1.))   # [num_noisy_indices, num_remaining_indices]
 
-        phi_nv = self.compute_angle_between_vectors(camera_forward, remaining_forward.expand_as(camera_forward))
+        phi_nv = self.compute_angle_between_vectors(clean_forward.expand_as(remaining_forward), remaining_forward)
 
         # first and second constraints for novel views
         novel_view_mask = ((theta_dn_matrix <= theta2).any(dim=0)) & (phi_nv >= torch.cos(phi2))

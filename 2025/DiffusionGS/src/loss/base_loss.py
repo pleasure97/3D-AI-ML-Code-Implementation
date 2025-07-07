@@ -2,7 +2,7 @@ from typing import TypeVar, Generic
 import torch
 import torchvision
 from torch import nn
-from torch import functional as F
+import torch.nn.functional as F
 
 T = TypeVar("T")
 class BaseLoss(nn.Module, Generic[T]):

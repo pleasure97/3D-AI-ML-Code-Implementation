@@ -99,9 +99,9 @@ class DiffusionGS(LightningModule):
 
         # Initialize Loss dict and Loss Values
         loss_dict = {}
-        denoising_loss = 0.
-        novel_view_loss = 0.
-        point_distribution_loss = 0.
+        total_denoising_loss = 0.
+        total_novel_view_loss = 0.
+        total_point_distribution_loss = 0.
 
         # Do Lazy Initialization for Positional Embedding
         if self.positional_embedding is None:
@@ -117,14 +117,16 @@ class DiffusionGS(LightningModule):
         # Iterate Timesteps
         for timestep in reversed(
                 range(self.diffusion_generator.num_timesteps, self.diffusion_generator.total_timesteps)):
+            point_distribution_loss = 0.
+            denoising_loss = 0.
+            novel_view_loss = 0.
 
             # Tokenize inputs to enter Patchify MLP
             noisy_views = batch["noisy"]["views"].unbind(dim=1)  # [batch_size, num_noisy_views, 3, height, width]
             transformer_input_tokens = self.tokenize_inputs(timestep,
                                                             batch["clean"]["views"],
                                                             noisy_views,
-                                                            self.patch_mlp,
-                                                            self.positional_embedding)
+                                                            self.patch_mlp)
 
             # Process timestep embedding and RPPC to skip connection
             clean_RPPC = batch["clean"]["RPPCs"]  # [batch_size, 1, 6, height, width]
@@ -139,27 +141,25 @@ class DiffusionGS(LightningModule):
             # Call forward propagation for each object decoder and scene decoder to train them
             # In finetuning phase, only one decoder will be used for each dataset type
             if self.train_config.is_object_dataset:
-                positions, covariances, colors, opacities = self.object_decoder.forward(timestep_mlp_output,
-                                                                                        transformer_backbone_output)
-                self.scene_decoder.forward(timestep_mlp_output, transformer_backbone_output)
+                positions, covariances, colors, opacities = self.object_decoder.forward(transformer_backbone_output,
+                                                                                        timestep_mlp_output)
             else:
-                self.object_decoder.forward(timestep_mlp_output, transformer_backbone_output)
-                positions, covariances, colors, opacities = self.scene_decoder.forward(timestep_mlp_output,
-                                                                                       transformer_backbone_output)
+                positions, covariances, colors, opacities = self.scene_decoder.forward(transformer_backbone_output,
+                                                                                       timestep_mlp_output)
 
             # Initialize variables that are repeatedly used in operations
             noisy_extrinsics = batch["noisy"]["extrinsics"]
             noisy_intrinsics = batch["noisy"]["intrinsics"]
             noisy_image_shape = batch["noisy"]["views"].shape
+            num_noisy_views = noisy_extrinsics.shape[1]
 
             # Compute Point Distribution Loss
             PointDistributionLoss = next(loss for loss in self.losses if loss.name == "PointDistributionLoss")
 
-            height, width = noisy_image_shape
+            height, width = noisy_image_shape[-1], noisy_image_shape[-2]
             c2w = make_c2w_from_extrinsics(noisy_extrinsics)
             rays_o, rays_d = get_rays(height, width, noisy_intrinsics, c2w)
 
-            # TODO - Consider k pixels and Divide loss value by k in forward()
             point_distribution_loss_value = PointDistributionLoss.forward(
                 self.gaussian_decoder.u_near,
                 self.gaussian_decoder.u_far,
@@ -169,7 +169,7 @@ class DiffusionGS(LightningModule):
             point_distribution_loss += point_distribution_loss_value
 
             # Rasterize 3D Gaussians
-            rasterized_image = self.gaussian_renderer.render(
+            rasterized_images = self.gaussian_renderer.render(
                 noisy_extrinsics,
                 noisy_intrinsics,
                 batch["noisy"]["nears"],
@@ -181,29 +181,40 @@ class DiffusionGS(LightningModule):
                 covariances,
                 opacities)
 
-            # Compute Denoising Loss between Multi-view Predicted Images and Ground-truth Image
-            DenoisingLoss = next(loss for loss in self.losses if loss.name == "DenoisingLoss")
-            # TODO - Consider N Multi-view Images and Divide loss value by N in forward()
-            denoising_loss_value = DenoisingLoss.forward(batch, rasterized_image)
-            denoising_loss += denoising_loss_value
+            # Iterate N Noisy Views
+            for i in range(num_noisy_views):
+                # Compute Denoising Loss between Multi-view Predicted Images and Ground-truth Image
+                DenoisingLoss = next(loss for loss in self.losses if loss.name == "DenoisingLoss")
+                # TODO - self.diffusion_generator.q_sample(batch["noisy"]["views"][:, i], timestep)
+                denoising_loss_value = DenoisingLoss.forward(batch["noisy"]["views"][:, i], rasterized_images[:, i])
+                denoising_loss += denoising_loss_value
 
-            # Compute Novel View Loss between Multi-view Predicted Images and M Novel Views
-            NovelViewLoss = next(loss for loss in self.losses if loss.name == "NovelViewLoss")
-            # TODO - Consider N Multi-view Images and M Novel views in forward()
-            novel_view_loss_value = NovelViewLoss.forward(batch, rasterized_image)
-            novel_view_loss += novel_view_loss_value
+                # Compute Novel View Loss between Multi-view Predicted Images and M Novel Views
+                if timestep is 0:
+                    NovelViewLoss = next(loss for loss in self.losses if loss.name == "NovelViewLoss")
+                    num_novel_views = batch["novel"]["views"].shape[1]
+                    for j in range(num_novel_views):
+                        novel_view = batch["novel"]["views"][:, j]
+                        novel_view_loss_value = NovelViewLoss.forward(novel_view, rasterized_images[:, i])
+                        novel_view_loss += novel_view_loss_value
+                    total_novel_view_loss /= num_novel_views
 
-            del rasterized_image
+            denoising_loss /= num_noisy_views
+
+            total_point_distribution_loss += point_distribution_loss
+            total_denoising_loss += denoising_loss
+
+            del rasterized_images
             torch.cuda.empty_cache()
 
-        loss_dict["PointDistributionLoss"] = point_distribution_loss_value / self.diffusion_generator.total_timesteps
-        self.log("loss/PointDistributionLoss", point_distribution_loss_value)
+        loss_dict["PointDistributionLoss"] = total_point_distribution_loss / self.diffusion_generator.total_timesteps
+        self.log("loss/PointDistributionLoss", total_point_distribution_loss / self.diffusion_generator.total_timesteps)
 
-        loss_dict["DenoisingLoss"] = denoising_loss_value / self.diffusion_generator.total_timesteps
-        self.log("loss/DenoisingLoss", denoising_loss_value)
+        loss_dict["DenoisingLoss"] = total_denoising_loss / self.diffusion_generator.total_timesteps
+        self.log("loss/DenoisingLoss", total_denoising_loss / self.diffusion_generator.total_timesteps)
 
-        loss_dict["NovelViewLoss"] = novel_view_loss_value / self.diffusion_generator.total_timesteps
-        self.log("loss/DenoisingLoss", denoising_loss_value)
+        loss_dict["NovelViewLoss"] = total_novel_view_loss
+        self.log("loss/NovelViewLoss", total_novel_view_loss)
 
         total_loss = \
             torch.where(current_step > self.optimizer_config.warmup_steps,
