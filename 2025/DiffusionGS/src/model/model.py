@@ -95,7 +95,8 @@ class DiffusionGS(LightningModule):
     def training_step(self, batch, batch_index):
         current_step = self.global_step
 
-        background_color = Tensor([0, 0, 0])  # TODO - if not preprocess.white_background else [1, 1, 1]
+        # background color
+        background_color = Tensor([1, 1, 1])
 
         # Initialize Loss dict and Loss Values
         loss_dict = {}
@@ -160,12 +161,13 @@ class DiffusionGS(LightningModule):
             c2w = make_c2w_from_extrinsics(noisy_extrinsics)
             rays_o, rays_d = get_rays(height, width, noisy_intrinsics, c2w)
 
+            # Point Distribution Loss is introduced to be object-centric generation more concentrated,
+            # so we use u_near and u_far of object decoder
             point_distribution_loss_value = PointDistributionLoss.forward(
-                self.gaussian_decoder.u_near,
-                self.gaussian_decoder.u_far,
+                self.object_decoder.u_near,
+                self.object_decoder.u_far,
                 rays_o,
-                rays_d,
-                timestep)
+                rays_d)
             point_distribution_loss += point_distribution_loss_value
 
             # Rasterize 3D Gaussians

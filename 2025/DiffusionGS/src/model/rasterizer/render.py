@@ -32,8 +32,10 @@ class GaussianRenderer(ModuleWithConfig[RenderConfig]):
             gaussian_covariances: Float[Tensor, "batch gaussian 3 sh_degree"],
             gaussian_opacities: Float[Tensor, "batch gaussian"],
     ) -> Float[Tensor, "batch 3 height width"]:
-        batch_size, gaussians, _, _ = extrinsics.shape
-        height, width = image_shape
+
+        batch_size = extrinsics.shape[0]
+        gaussians = gaussian_means.shape[1]
+        height, width = image_shape[-2], image_shape[-1]
 
         # FOV & Projection
         fov_x, fov_y = get_fov(intrinsics).unbind(dim=-1)
@@ -45,7 +47,7 @@ class GaussianRenderer(ModuleWithConfig[RenderConfig]):
         # Compute 2D means from 3D Gaussian Centers
         ones = torch.ones(batch_size, gaussians, 1, device=gaussian_means.device)
         homogeneous_points = torch.cat([gaussian_means, ones], dim=-1)
-        camera_points = (extrinsics @ homogeneous_points.unsqueeze(-1)).squeeze(-1)
+        camera_points = homogeneous_points @ extrinsics.transpose(-2, -1)
 
         # Camera to Clip
         clip = (projection_matrix @ camera_points.unsqueeze(-1)).squeeze(-1)
@@ -54,13 +56,14 @@ class GaussianRenderer(ModuleWithConfig[RenderConfig]):
         pixel_y = (normalized_coordinates[..., 1] * 0.5 + 0.5) * height
         means2D = torch.stack([pixel_x, pixel_y], dim=-1)
 
-        background = background_color[:, :, None, None].expand(-1, -1, height, width)
+        background = background_color.view(1, 3, 1, 1)
+        background = background.expand(batch_size, 3, height, width)
 
         settings = GaussianRasterizationSettings(
             image_height=height,
             image_width=width,
             tanfovx=tan_fov_x,
-            tanfovy=tan_fov_y   ,
+            tanfovy=tan_fov_y,
             bg=background,
             scale_modifier=self.config.scale_modifier,
             viewmatrix=extrinsics,

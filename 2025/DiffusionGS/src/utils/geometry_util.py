@@ -15,7 +15,7 @@ def get_fov(intrinsics: Float[Tensor, "batch 3 3"]) -> Float[Tensor, "batch 2"]:
     inverse_intrinsics = intrinsics.inverse()
 
     def convert_to_camera_directional_vector(vector):
-        vector = torch.tensor(vector, dtype=torch.float32, device=intrinsics.device).unsqueeze(-1)
+        vector = torch.tensor(vector, dtype=intrinsics.dtype, device=intrinsics.device).unsqueeze(-1)
         vector = torch.matmul(inverse_intrinsics, vector).squeeze(-1)
         return F.normalize(vector, dim=-1)
 
@@ -192,12 +192,21 @@ def multiply_scaling_rotation(scale, quaternion):
 
 
 def make_projection_matrix(near, far, tan_fov_x, tan_fov_y):
+    if isinstance(near, torch.Tensor):
+        near = near.view(-1)[0].item()
+    if isinstance(far, torch.Tensor):
+        far = far.view(-1)[0].item()
+    if isinstance(tan_fov_x, torch.Tensor):
+        tan_fov_x = tan_fov_x.view(-1)[0].item()
+    if isinstance(tan_fov_y, torch.Tensor):
+        tan_fov_y = tan_fov_y.view(-1)[0].item()
+
     top = tan_fov_x * near
     bottom = -top
     right = tan_fov_y * near
     left = -right
 
-    projection_matrix = torch.zeros(4, 4)
+    projection_matrix = torch.zeros(4, 4, device="cuda")
 
     sign = 1.
 

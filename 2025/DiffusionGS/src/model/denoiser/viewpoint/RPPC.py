@@ -5,28 +5,46 @@ def get_rays(height, width, intrinsics, c2w, jitter=False):
     """
       height : image height
       width : image width
-      intrinsics : 4 by 4 intrinsic matrix
+      intrinsics : 3 by 3 intrinsic matrix
       c2w : 4 by 4 camera to world extrinsic matrix
     """
+    # Check shape of intrinsics
+    intrinsics = intrinsics.to(torch.float32)
+    if intrinsics.ndim == 2:
+        intrinsics = intrinsics.unsqueeze(0)
+    elif intrinsics.ndim == 4:
+        intrinsics = intrinsics.view(-1, 3, 3)
+    assert intrinsics.ndim == 3 and intrinsics.shape[-2:] == (3, 3)
+
+    # Check shape of camera-to-world matrices
+    if c2w.ndim == 2:
+        c2w = c2w.unsqueeze(0)
+    elif c2w.ndim == 4:
+        B1, B2, _, _ = c2w.shape
+        c2w = c2w.view(B1 * B2, 4, 4)
+    assert c2w.ndim == 3 and c2w.shape[-2:] == (4, 4)
+
+    # Generate pixel coordinates
     u, v = torch.meshgrid(
         torch.arange(width, dtype=torch.float32, device=c2w.device),
         torch.arange(height, dtype=torch.float32, device=c2w.device),
         indexing="ij")
-    B = c2w.shape[0]
+    # Unfold into 1D vector
     u, v = u.reshape(-1), v.reshape(-1)
     u_noise = v_noise = 0.5
     if jitter:
         u_noise = torch.rand(u.shape, device=c2w.device)
         v_noise = torch.rand(v.shape, device=c2w.device)
     u, v = u + u_noise, v + v_noise  # add half pixel
+    B = c2w.shape[0]
     pixels = torch.stack((u, v, torch.ones_like(u, dtype=torch.float32)), dim=0)  # (3, H * W)
     pixels = pixels.unsqueeze(0).repeat(B, 1, 1)  # (B, 3 , H * W)
 
-    intrinsics = intrinsics.to(torch.float32)
     if intrinsics.sum() == 0:
         inv_intrinsics = torch.eye(3, device=c2w.device).tile(B, 1, 1)
     else:
         inv_intrinsics = torch.linalg.inv(intrinsics)
+
     rays_d = inv_intrinsics @ pixels  # (B, 3, H * W)
     rays_d = c2w[:, :3, :3] @ rays_d
     rays_d = rays_d.transpose(-1, -2)  # (B, H * W, 3)
