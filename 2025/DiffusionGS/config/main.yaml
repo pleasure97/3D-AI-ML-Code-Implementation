@@ -35,15 +35,15 @@ dataset:
 dataloader:
   train:
     batch_size: 1
-    num_workers: 0
+    num_workers: 11
     seed: 1234
   test:
     batch_size: 1
-    num_workers: 0
+    num_workers: 11
     seed: 1234
   validation:
     batch_size: 1
-    num_workers: 0
+    num_workers: 11
     seed: 1234
 
 model:

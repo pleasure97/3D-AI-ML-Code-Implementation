@@ -87,16 +87,21 @@ class DiffusionGS(LightningModule):
         self.object_decoder = object_decoder
         self.scene_decoder = scene_decoder
         self.gaussian_renderer = gaussian_renderer
-        self.losses = nn.ModuleList(losses)
 
+        self.losses = nn.ModuleList(losses)
         self.lpips = LPIPS(device="cuda" if torch.cuda.is_available() else "cpu")
+        self.freeze_loss_parameters()
         self.fid = None
+
+    def freeze_loss_parameters(self):
+        for loss in self.losses:
+            for loss_parameter in loss.parameters():
+                loss_parameter.requires_grad = False
+        for parameter in self.lpips.parameters():
+            parameter.requires_grad = False
 
     def training_step(self, batch, batch_index):
         current_step = self.global_step
-
-        # background color
-        background_color = Tensor([1, 1, 1])
 
         # Initialize Loss dict and Loss Values
         loss_dict = {}
@@ -174,14 +179,12 @@ class DiffusionGS(LightningModule):
             rasterized_images = self.gaussian_renderer.render(
                 noisy_extrinsics,
                 noisy_intrinsics,
-                batch["noisy"]["nears"],
-                batch["noisy"]["fars"],
                 noisy_image_shape,
-                background_color,
                 colors,
                 positions,
                 covariances,
-                opacities)
+                opacities,
+                background_white=True)
 
             # Iterate N Noisy Views
             for i in range(num_noisy_views):
@@ -192,7 +195,7 @@ class DiffusionGS(LightningModule):
                 denoising_loss += denoising_loss_value
 
                 # Compute Novel View Loss between Multi-view Predicted Images and M Novel Views
-                if timestep is 0:
+                if timestep == 0:
                     NovelViewLoss = next(loss for loss in self.losses if loss.name == "NovelViewLoss")
                     num_novel_views = batch["novel"]["views"].shape[1]
                     for j in range(num_novel_views):

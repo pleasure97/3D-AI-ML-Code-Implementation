@@ -40,7 +40,8 @@ class DataModule(LightningDataModule):
             dataset,
             self.dataloader_config.train.batch_size,
             shuffle=False,
-            num_workers=self.dataloader_config.train.num_workers)
+            num_workers=self.dataloader_config.train.num_workers,
+            persistent_workers=True)
         print("[DEBUG] train batches available:", len(loader))
 
         return loader
@@ -51,8 +52,8 @@ class DataModule(LightningDataModule):
         return DataLoader(
             dataset,
             self.dataloader_config.validation.batch_size,
-            num_workers=self.dataloader_config.validation.num_workers
-        )
+            num_workers=self.dataloader_config.validation.num_workers,
+            persistent_workers=True)
 
     def test_dataloader(self):
         dataset = get_dataset(self.dataset_config, "test", self.step_tracker)
@@ -60,5 +61,5 @@ class DataModule(LightningDataModule):
         return DataLoader(
             dataset,
             self.dataset_config.test.batch_size,
-            num_workers=self.dataloader_config.test.num_workers
-        )
+            num_workers=self.dataloader_config.test.num_workers,
+            persistent_workers=True)

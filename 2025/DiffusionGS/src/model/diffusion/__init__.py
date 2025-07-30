@@ -44,7 +44,8 @@ class DiffusionGenerator(DiffusionGeneratorConfig):
         batch_size = original_sample.shape[0]
         timesteps = torch.full((batch_size,), timestep, device=self.device)
 
-        with torch.cuda.amp.autocast():
+        # Mixed-Precision Training with BF16
+        with torch.amp.autocast("cuda", torch.bfloat16):
             # Generate noise
             noise = torch.randn_like(original_sample)
             noisy_image = self.scheduler.add_noise(original_sample, noise, timesteps)
