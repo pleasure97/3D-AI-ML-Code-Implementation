@@ -17,6 +17,8 @@ class DenoisingLoss(BaseLoss[DenoisingLossConfig]):
 
         self.vgg = VGGLoss()
         self.mse = nn.MSELoss()
+        for vgg_loss_parameter in self.vgg.parameters():
+            vgg_loss_parameter.requires_grad = False
 
     def forward(self,
                 ground_truth_image: Tensor,

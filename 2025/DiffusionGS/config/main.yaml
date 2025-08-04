@@ -90,7 +90,7 @@ model:
     hidden_dim: 768
     output_dim: 14
     weight: 0.5
-    num_points: 8192
+    num_points: 4096
     timestep_mlp:
       name: "timestep_mlp"
       embedding:
@@ -106,7 +106,7 @@ model:
     hidden_dim: 768
     output_dim: 14
     weight: 0.5
-    num_points: 8192
+    num_points: 4096
     timestep_mlp:
       name: "timestep_mlp"
       embedding:
@@ -115,7 +115,6 @@ model:
         max_period: 10_000
       out_dim: 768
   render:
-    sh_degree: 3
     scale_modifier: 1.
     prefiltered: False
     debug: False
@@ -135,6 +134,7 @@ trainer:
   precision: 16
   validation_check_interval: 0
   gradient_clip_validation: 0.5
+  accumulate_grad_batches: 2
 
 losses:
   denoising:

@@ -13,7 +13,7 @@ eval-type-backport==0.2.2
 fastapi-cli==0.0.7
 filetype==1.2.0
 gradio==3.24.1
-gsplat==1.5.3
+gsplat==1.5.2+pt21cu118
 h2==4.2.0
 hf-xet==1.1.0
 httptools==0.6.4
@@ -45,8 +45,8 @@ rembg==2.0.53
 ruamel.yaml==0.18.10
 shiboken6==6.8.3
 tomli==2.0.1
-torchaudio==2.7.1+cu128
-torchvision==0.22.1+cu128
+torchaudio==2.1.2+cu118
+torchvision==0.16.2+cu118
 tornado==6.4.2
 transformers==4.51.3
 typer-slim==0.15.2

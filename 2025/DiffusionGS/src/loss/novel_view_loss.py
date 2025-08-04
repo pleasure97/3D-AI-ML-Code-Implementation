@@ -16,6 +16,8 @@ class NovelViewLoss(BaseLoss[NovelViewLossConfig]):
 
         self.mse = nn.MSELoss()
         self.vgg = VGGLoss()
+        for vgg_loss_parameter in self.vgg.parameters():
+            vgg_loss_parameter.requires_grad = False
 
     def forward(self,
                 ground_truth_image: Tensor,

@@ -80,7 +80,8 @@ def train(config_dict: DictConfig):
         val_check_interval=config.trainer.validation_check_interval,
         enable_progress_bar=True,
         gradient_clip_val=config.trainer.gradient_clip_validation,
-        max_steps=config.trainer.max_steps)
+        max_steps=config.trainer.max_steps,
+        accumulate_grad_batches=config.trainer.accumulate_grad_batches)
 
     torch.manual_seed(config_dict.seed + trainer.global_rank)
 

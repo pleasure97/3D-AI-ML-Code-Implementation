@@ -7,7 +7,6 @@ from src.model import ModuleWithConfig
 
 @dataclass
 class RenderConfig:
-    sh_degree: int
     scale_modifier: float
     prefiltered: bool
     debug: bool
@@ -56,18 +55,19 @@ class GaussianRenderer(ModuleWithConfig[RenderConfig]):
                 quaternions = torch.zeros(num_gaussians, 4, device=device)
                 scales = torch.zeros(num_gaussians, 3, device=device)
 
+                # gsplat doesn't support mixed precision training
                 output_colors, output_alphas, meta = gsplat.rasterization(
-                    means=means,
+                    means=means.float(),
                     quats=quaternions,
                     scales=scales,
-                    opacities=opacities,
-                    colors=batch_colors,
-                    viewmats=batch_extrinsics,
-                    Ks=batch_intrinsics,
+                    opacities=opacities.float(),
+                    colors=batch_colors.float(),
+                    viewmats=batch_extrinsics.float(),
+                    Ks=batch_intrinsics.float(),
                     width=width,
                     height=height,
-                    covars=covariances,
-                    backgrounds=background,
+                    covars=covariances.float(),
+                    backgrounds=background.float(),
                     sh_degree=None,
                     packed=False,
                     render_mode='RGB')

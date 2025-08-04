@@ -36,6 +36,7 @@ class TrainerConfig:
     precision: int
     validation_check_interval: int | float | None
     gradient_clip_validation: int | float | None
+    accumulate_grad_batches: int
 
 
 @dataclass

@@ -5,7 +5,7 @@ from lightning.pytorch.utilities import rank_zero_only
 from typing import Optional
 from pathlib import Path
 import torch
-from torch import nn, Tensor
+from torch import nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 from src.utils.config_util import get_config
@@ -13,7 +13,6 @@ from src.utils.step_tracker import StepTracker
 from src.utils.benchmarker import Benchmarker
 from src.utils.geometry_util import make_c2w_from_extrinsics
 from src.model.diffusion import DiffusionGenerator
-from src.model.types import Gaussians
 from src.model.rasterizer.render import GaussianRenderer
 from src.model.denoiser.embedding.timestep_embedding import TimestepMLP
 from src.model.denoiser.embedding.patch_embedding import PatchMLP
@@ -24,6 +23,7 @@ from src.model.denoiser.viewpoint.RPPC import get_rays
 from src.evaluation.metrics import get_psnr, get_ssim, get_fid, LPIPS
 from src.loss import LossesConfig
 from src.loss.base_loss import BaseLoss
+import GPUtil
 
 
 @dataclass
@@ -102,6 +102,8 @@ class DiffusionGS(LightningModule):
 
     def training_step(self, batch, batch_index):
         current_step = self.global_step
+        print(f"[Step {current_step}] Begin :")
+        GPUtil.showUtilization()
 
         # Initialize Loss dict and Loss Values
         loss_dict = {}
@@ -175,6 +177,9 @@ class DiffusionGS(LightningModule):
                 rays_d)
             point_distribution_loss += point_distribution_loss_value
 
+            print(f"[Step {current_step}] Before Rendering :")
+            GPUtil.showUtilization()
+
             # Rasterize 3D Gaussians
             rasterized_images = self.gaussian_renderer.render(
                 noisy_extrinsics,
@@ -185,6 +190,9 @@ class DiffusionGS(LightningModule):
                 covariances,
                 opacities,
                 background_white=True)
+
+            print(f"[Step {current_step}] Right After Rendering :")
+            GPUtil.showUtilization()
 
             # Iterate N Noisy Views
             for i in range(num_noisy_views):
@@ -208,6 +216,9 @@ class DiffusionGS(LightningModule):
 
             total_point_distribution_loss += point_distribution_loss
             total_denoising_loss += denoising_loss
+
+            print(f"[Step {current_step}] Right After Calculating Loss :")
+            GPUtil.showUtilization()
 
             del rasterized_images
             torch.cuda.empty_cache()
@@ -234,6 +245,9 @@ class DiffusionGS(LightningModule):
 
         if self.step_tracker is not None:
             self.step_tracker.set_step(self.global_step)
+
+        print(f"[Step {current_step}] Ends :")
+        GPUtil.showUtilization()
 
         return total_loss
 
