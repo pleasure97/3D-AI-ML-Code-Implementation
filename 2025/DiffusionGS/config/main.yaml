@@ -15,7 +15,7 @@ mode: train
 dataset:
   name: MVImgNet
   path: outputs
-  image_shape: [180, 320]
+  image_shape: [256, 256]
   remove_background: True
   center_and_scale: True
   root: datasets/MVImgNet
@@ -90,7 +90,7 @@ model:
     hidden_dim: 768
     output_dim: 14
     weight: 0.5
-    num_points: 4096
+    num_points: 65536
     timestep_mlp:
       name: "timestep_mlp"
       embedding:
@@ -106,7 +106,7 @@ model:
     hidden_dim: 768
     output_dim: 14
     weight: 0.5
-    num_points: 4096
+    num_points: 65536
     timestep_mlp:
       name: "timestep_mlp"
       embedding:
@@ -130,9 +130,10 @@ checkpoint:
   save_top_k: -1
 
 trainer:
+  max_epochs: 50
   max_steps: -1
   precision: 16
-  validation_check_interval: 0
+  validation_check_interval: 100
   gradient_clip_validation: 0.5
   accumulate_grad_batches: 2
 
@@ -149,6 +150,7 @@ losses:
 
 train:
   is_object_dataset: True
+  accumulation_steps: 2
 
 test:
   output_path: "outputs/test"

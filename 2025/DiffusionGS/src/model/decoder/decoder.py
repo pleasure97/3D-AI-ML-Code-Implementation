@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from typing import Literal
+from jaxtyping import Float
 from src.model import ModuleWithConfig
 import torch
 import torch.nn as nn
+from torch import Tensor
 from src.model.types import Gaussians
 from src.utils.geometry_util import multiply_scaling_rotation
 
@@ -25,8 +27,8 @@ class GaussianDecoder(ModuleWithConfig[GaussianDecoderConfig]):
 
         self.config = config
 
-        self.u_near = torch.tensor(self.config.u_near, dtype=torch.float32)
-        self.u_far = torch.tensor(self.config.u_far, dtype=torch.float32)
+        self.register_buffer("u_near", torch.tensor(self.config.u_near, dtype=torch.float32))
+        self.register_buffer("u_far", torch.tensor(self.config.u_far, dtype=torch.float32))
 
         self.num_points = self.config.num_points
 
@@ -42,7 +44,9 @@ class GaussianDecoder(ModuleWithConfig[GaussianDecoderConfig]):
         # weight to control center
         self.weight = self.config.weight
 
-    def forward(self, x, timestep_embedding) -> Gaussians:
+    def forward(self,
+                x : Float[Tensor, "batch num_tokens input_dim"],
+                timestep_embedding: Float[Tensor, "batch time_dim"]) -> Gaussians:
         output1 = self.mlp1(x)
         output1 = output1 + timestep_embedding.mean(dim=1, keepdim=True)
 
@@ -52,8 +56,12 @@ class GaussianDecoder(ModuleWithConfig[GaussianDecoderConfig]):
         positions = torch.tanh(output2[:, :, :3])
 
         # Depth Transition
-        depth = self.weight * self.u_near + (1 - self.weight) * self.u_far
-        positions[:, :, 2] = depth
+        depth = (self.weight * self.u_near + (1 - self.weight) * self.u_far).to(positions.device)
+        if depth.dim() == 0:
+            depth = depth.view(1, 1).expand(positions.shape[0], positions.shape[1])
+
+        depth = depth.unsqueeze(-1)
+        positions = torch.cat([positions[..., :2], depth], dim=-1)
 
         # Color is in [0, 1]
         colors = torch.sigmoid(output2[:, :, 3:6])
