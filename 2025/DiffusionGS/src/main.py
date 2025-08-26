@@ -71,7 +71,7 @@ def train(config_dict: DictConfig):
 
     # Trainer
     trainer = Trainer(
-        max_epochs=-1,
+        max_epochs=config.trainer.max_epochs,
         accelerator="gpu",
         logger=logger,
         devices=1,
@@ -79,9 +79,7 @@ def train(config_dict: DictConfig):
         precision=config.trainer.precision,
         val_check_interval=config.trainer.validation_check_interval,
         enable_progress_bar=True,
-        gradient_clip_val=config.trainer.gradient_clip_validation,
-        max_steps=config.trainer.max_steps,
-        accumulate_grad_batches=config.trainer.accumulate_grad_batches)
+        max_steps=config.trainer.max_steps)
 
     torch.manual_seed(config_dict.seed + trainer.global_rank)
 

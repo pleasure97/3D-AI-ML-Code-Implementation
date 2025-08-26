@@ -81,21 +81,45 @@ class DatasetMVImgNet(IterableDataset):
                 # File Name
                 file_name = f"{view_id:03d}.jpg"
                 image_path = os.path.join(scene, "images", file_name)
+
+                # Exception Handling for FileNotFoundError
+                if not os.path.exists(image_path):
+                    print(f"[LOG] Missing Image : {image_path}, skipping...")
+                    continue
+
                 pil = Image.open(image_path).convert("RGB")
                 images.append(ToTensor()(pil).to(self.device))
+
+            # If no valid images in this scene, skip it
+            if len(images) == 0:
+                print(f"[LOG] Scene {scene} has no valid images. Skipping scene.")
+                continue
 
             # View Sampler
             extrinsics = torch.stack(extrinsics, dim=0)
             intrinsics = torch.stack(intrinsics, dim=0)
             images = torch.stack(images, dim=0)
 
-            clean_index, noisy_indices, novel_indices = self.view_sampler.sample(extrinsics)
-            clean_index = int(clean_index.item())
+            valid_view_count = len(images)
+
+            try:
+                clean_index, noisy_indices, novel_indices = self.view_sampler.sample(extrinsics)
+                clean_index = int(clean_index.item())
+            except Exception as e:
+                # If sampler fails because there aren't enough candidates, skip this scene
+                print(
+                    f"[LOG] view_sampler.sample failed for scene {scene} with valid_view_count={valid_view_count}: {e}")
+                continue
 
             # Prepare Information based on Sampled Clean, Noisy, Novel Views
-            clean_info = self._prepare_views(clean_index, extrinsics, intrinsics, images)
-            noisy_info = self._prepare_views(noisy_indices, extrinsics, intrinsics, images)
-            novel_info = self._prepare_views(novel_indices, extrinsics, intrinsics, images)
+            try:
+                clean_info = self._prepare_views(clean_index, extrinsics, intrinsics, images)
+                noisy_info = self._prepare_views(noisy_indices, extrinsics, intrinsics, images)
+                novel_info = self._prepare_views(novel_indices, extrinsics, intrinsics, images)
+            except Exception as e:
+                # Any index or shape related problem: skip the scene and log
+                print(f"[LOG] _prepare_views failed for scene {scene}: {e}")
+                continue
 
             # Construct "example" dictionary.
             example = {

@@ -36,6 +36,7 @@ class OptimizerConfig:
 @dataclass
 class TrainConfig:
     is_object_dataset: bool
+    accumulation_steps: int
 
 
 @dataclass
@@ -93,6 +94,8 @@ class DiffusionGS(LightningModule):
         self.freeze_loss_parameters()
         self.fid = None
 
+        self.automatic_optimization = False
+
     def freeze_loss_parameters(self):
         for loss in self.losses:
             for loss_parameter in loss.parameters():
@@ -102,14 +105,18 @@ class DiffusionGS(LightningModule):
 
     def training_step(self, batch, batch_index):
         current_step = self.global_step
+        optimizer = self.optimizers()
+        optimizer.zero_grad()
+
         print(f"[Step {current_step}] Begin :")
-        GPUtil.showUtilization()
 
         # Initialize Loss dict and Loss Values
-        loss_dict = {}
-        total_denoising_loss = 0.
-        total_novel_view_loss = 0.
-        total_point_distribution_loss = 0.
+        total_denoising_loss_log = 0.
+        total_novel_view_loss_log = 0.
+        total_point_distribution_loss_log = 0.
+
+        # Initialize iteration count
+        iter_count = 0
 
         # Do Lazy Initialization for Positional Embedding
         if self.positional_embedding is None:
@@ -125,10 +132,6 @@ class DiffusionGS(LightningModule):
         # Iterate Timesteps
         for timestep in reversed(
                 range(self.diffusion_generator.num_timesteps, self.diffusion_generator.total_timesteps)):
-            point_distribution_loss = 0.
-            denoising_loss = 0.
-            novel_view_loss = 0.
-
             # Tokenize inputs to enter Patchify MLP
             noisy_views = batch["noisy"]["views"].unbind(dim=1)  # [batch_size, num_noisy_views, 3, height, width]
             transformer_input_tokens = self.tokenize_inputs(timestep,
@@ -168,17 +171,7 @@ class DiffusionGS(LightningModule):
             c2w = make_c2w_from_extrinsics(noisy_extrinsics)
             rays_o, rays_d = get_rays(height, width, noisy_intrinsics, c2w)
 
-            # Point Distribution Loss is introduced to be object-centric generation more concentrated,
-            # so we use u_near and u_far of object decoder
-            point_distribution_loss_value = PointDistributionLoss.forward(
-                self.object_decoder.u_near,
-                self.object_decoder.u_far,
-                rays_o,
-                rays_d)
-            point_distribution_loss += point_distribution_loss_value
-
             print(f"[Step {current_step}] Before Rendering :")
-            GPUtil.showUtilization()
 
             # Rasterize 3D Gaussians
             rasterized_images = self.gaussian_renderer.render(
@@ -192,64 +185,97 @@ class DiffusionGS(LightningModule):
                 background_white=True)
 
             print(f"[Step {current_step}] Right After Rendering :")
-            GPUtil.showUtilization()
 
             # Iterate N Noisy Views
+            DenoisingLoss = next(loss for loss in self.losses if loss.name == "DenoisingLoss")
+            denoising_loss_value = 0.
             for i in range(num_noisy_views):
                 # Compute Denoising Loss between Multi-view Predicted Images and Ground-truth Image
-                DenoisingLoss = next(loss for loss in self.losses if loss.name == "DenoisingLoss")
-                # TODO - self.diffusion_generator.q_sample(batch["noisy"]["views"][:, i], timestep)
-                denoising_loss_value = DenoisingLoss.forward(batch["noisy"]["views"][:, i], rasterized_images[:, i])
-                denoising_loss += denoising_loss_value
+                denoising_loss_value += DenoisingLoss.forward(batch["noisy"]["views"][:, i], rasterized_images[:, i])
+            denoising_loss_value /= num_noisy_views
 
-                # Compute Novel View Loss between Multi-view Predicted Images and M Novel Views
-                if timestep == 0:
-                    NovelViewLoss = next(loss for loss in self.losses if loss.name == "NovelViewLoss")
-                    num_novel_views = batch["novel"]["views"].shape[1]
+            # Point Distribution Loss is introduced to be object-centric generation more concentrated,
+            # so we use u_near and u_far of object decoder
+            point_distribution_loss_value = PointDistributionLoss.forward(
+                positions,
+                noisy_extrinsics)
+
+            novel_view_loss_value = torch.tensor(0., device=rasterized_images.device)
+            # Compute Novel View Loss between Multi-view Predicted Images and M Novel Views
+            if timestep == 0:
+                NovelViewLoss = next(loss for loss in self.losses if loss.name == "NovelViewLoss")
+                num_novel_views = batch["novel"]["views"].shape[1]
+                sum_novel_view_loss = 0.
+                for i in range(num_noisy_views):
                     for j in range(num_novel_views):
-                        novel_view = batch["novel"]["views"][:, j]
-                        novel_view_loss_value = NovelViewLoss.forward(novel_view, rasterized_images[:, i])
-                        novel_view_loss += novel_view_loss_value
-                    total_novel_view_loss /= num_novel_views
+                        novel_view = batch["novel"]["views"][:, j].to(rasterized_images.device)
+                        sum_novel_view_loss += NovelViewLoss.forward(novel_view, rasterized_images[:, i])
+                    # Detach to prevent memory leaks
+                novel_view_loss_value = sum_novel_view_loss / (num_noisy_views * max(1, num_novel_views))
 
-            denoising_loss /= num_noisy_views
+            # Detach to prevent memory leaks
+            total_point_distribution_loss_log += point_distribution_loss_value.detach().cpu().item()
+            total_denoising_loss_log += denoising_loss_value.detach().cpu().item()
+            total_novel_view_loss_log += novel_view_loss_value.detach().cpu().item()
 
-            total_point_distribution_loss += point_distribution_loss
-            total_denoising_loss += denoising_loss
+            # Calculate Training Loss reflecting training iteration and dataset type
+            if current_step > self.optimizer_config.warmup_steps:
+                step_loss_for_backpropagation = denoising_loss_value + novel_view_loss_value
+            else:
+                if self.train_config.is_object_dataset:
+                    step_loss_for_backpropagation = point_distribution_loss_value
+                else:
+                    step_loss_for_backpropagation = point_distribution_loss_value * 0.
+
+            if not isinstance(step_loss_for_backpropagation,
+                              torch.Tensor) or not step_loss_for_backpropagation.requires_grad:
+                print(f"[WARN] step loss not differentiable at step {current_step}. Attempting fallback.")
+                if isinstance(denoising_loss_value, torch.Tensor) and denoising_loss_value.requires_grad:
+                    step_loss_for_backpropagation = denoising_loss_value
+                    print(" -> fallback to denoising_loss_value")
+                else:
+                    print(" -> no differentiable loss available; skipping backward for this iter")
+                    skip_backward = True
+            else:
+                skip_backward = False
+
+            step_loss_for_backpropagation /= float(self.train_config.accumulation_steps)
+
+            if not skip_backward:
+                self.manual_backward(step_loss_for_backpropagation)
+
+            will_step = ((iter_count + 1) % self.train_config.accumulation_steps) == 0
+            retain = not will_step
+
+            iter_count += 1
+            if will_step:
+                optimizer.step()
+                optimizer.zero_grad()
 
             print(f"[Step {current_step}] Right After Calculating Loss :")
-            GPUtil.showUtilization()
 
             del rasterized_images
             torch.cuda.empty_cache()
 
-        loss_dict["PointDistributionLoss"] = total_point_distribution_loss / self.diffusion_generator.total_timesteps
-        self.log("loss/PointDistributionLoss", total_point_distribution_loss / self.diffusion_generator.total_timesteps)
-
-        loss_dict["DenoisingLoss"] = total_denoising_loss / self.diffusion_generator.total_timesteps
-        self.log("loss/DenoisingLoss", total_denoising_loss / self.diffusion_generator.total_timesteps)
-
-        loss_dict["NovelViewLoss"] = total_novel_view_loss
-        self.log("loss/NovelViewLoss", total_novel_view_loss)
-
-        total_loss = \
-            torch.where(current_step > self.optimizer_config.warmup_steps,
-                        loss_dict["DenoisingLoss"] + loss_dict["NovelViewLoss"],
-                        loss_dict["PointDistributionLoss"] * torch.where(self.training_config.is_object_dataset, 1, 0))
-
-        if self.global_rank == 0:
-            print(f"train step {self.global_step}; "
-                  f"scene = {batch['scene']}; "
-                  f"source = {batch['source']['index'].tolist()}"
-                  f"loss = {total_loss:.6f}")
+        metrics = {
+            "loss/PointDistributionLoss_manual":
+                total_point_distribution_loss_log / self.diffusion_generator.total_timesteps,
+            "loss/DenoisingLoss_manual":
+                total_denoising_loss_log / self.diffusion_generator.total_timesteps,
+            "loss/NovelViewLoss_manual":
+                total_novel_view_loss_log,
+            "global_step":
+                int(self.global_step)
+        }
+        self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
+        self.logger.experiment.log(metrics, step=int(self.global_step))
 
         if self.step_tracker is not None:
             self.step_tracker.set_step(self.global_step)
 
         print(f"[Step {current_step}] Ends :")
-        GPUtil.showUtilization()
 
-        return total_loss
+        return None
 
     def tokenize_inputs(self,
                         timestep: int,
@@ -273,11 +299,7 @@ class DiffusionGS(LightningModule):
 
     @rank_zero_only
     def validation_step(self, batch, batch_index):
-        if self.global_rank == 0:
-            if isinstance(batch["clean"], dict):
-                print("clean keys:", batch["clean"].keys())
-            else:
-                print("clean tensor shape:", batch["clean"].shape)
+        pass
 
     def test_step(self, batch, batch_index):
         batch_size, _, _, height, width = batch["noisy"]["views"].shape

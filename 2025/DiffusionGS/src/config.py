@@ -32,6 +32,7 @@ class CheckpointConfig:
 
 @dataclass
 class TrainerConfig:
+    max_epochs: int
     max_steps: int
     precision: int
     validation_check_interval: int | float | None
